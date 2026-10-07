@@ -9,6 +9,7 @@ from jackdaw.engine import game as engine
 from jackdaw.engine.actions import (CashOut, Discard, NextRound, OpenBooster, PickPackCard, PlayHand,
                                     RedeemVoucher, Reroll, SelectBlind, SellCard, SkipBlind, SkipPack,
                                     UseConsumable, get_legal_actions)
+from jackdaw.engine.consumables import can_use_consumable, pack_pick_block_reason
 from jackdaw.engine.game import IllegalActionError
 from jackdaw.engine.run_init import initialize_run
 
@@ -40,9 +41,12 @@ def _card(c) -> dict:
         return {"hidden": True, "rank": "?", "suit": "?"}
     rank = str(_val(c.base.rank))
     ck = c.center_key or "c_base"
-    return {"rank": RANK.get(rank, rank), "suit": SUIT.get(str(_val(c.base.suit)), "?"),
-            "enh": ck[2:] if ck.startswith("m_") else None, "ed": _edition(c),
-            "seal": c.seal or None, "debuff": bool(c.debuff)}
+    d = {"rank": RANK.get(rank, rank), "suit": SUIT.get(str(_val(c.base.suit)), "?"),
+         "enh": ck[2:] if ck.startswith("m_") else None, "ed": _edition(c),
+         "seal": c.seal or None, "debuff": bool(c.debuff)}
+    if isinstance(c.ability, dict) and c.ability.get("forced_selection"):  # Cerulean Bell
+        d["forced"] = True
+    return d
 
 
 def _set(c) -> str:
@@ -58,6 +62,24 @@ def _item(c, src: tuple[str, int]) -> dict:
     else:
         it["key"] = c.center_key
         it["ed"] = _edition(c)
+    return it
+
+
+def _usable(c, gs: dict) -> bool:
+    """The mod's `usable`: targeted cards need enough hand cards (the selection is judged when used)."""
+    hand = gs.get("hand", [])
+    if c.center_key in game.TARGETS:
+        return len(hand) >= game.MIN_TARGETS.get(c.center_key, 1)
+    return can_use_consumable(c, hand_cards=hand, jokers=gs.get("jokers", []), consumables=gs.get("consumables", []),
+                              consumable_limit=gs.get("consumable_slots", 2), joker_limit=gs.get("joker_slots", 5),
+                              game_state=gs)
+
+
+def _pack_item(c, i: int, gs: dict) -> dict:
+    it = _item(c, ("pack", i))
+    # untargeted cards only: a targeted one is judged against the selection it is applied to
+    if it.get("key") not in game.TARGETS and pack_pick_block_reason(c, gs, None) is not None:
+        it["blocked"] = True
     return it
 
 
@@ -101,7 +123,7 @@ def canonical(gs: dict) -> dict | None:
                     "desc": _joker_desc(j)} for j in gs.get("jokers", [])]
     s["vouchers"] = sorted(k for k, v in (gs.get("used_vouchers") or {}).items() if v)
     s["deck_counts"] = _deck_counts(gs.get("deck", []))
-    s["consumables"] = [{"key": c.center_key} for c in gs.get("consumables", [])]
+    s["consumables"] = [{"key": c.center_key, "usable": _usable(c, gs)} for c in gs.get("consumables", [])]
     hl = gs["hand_levels"]
     s["levels"] = {}
     for h in HANDS:
@@ -125,7 +147,7 @@ def canonical(gs: dict) -> dict | None:
                      + [_item(c, ("boosters", i)) for i, c in enumerate(gs.get("shop_boosters", []))])
         s["reroll_cost"] = cr.get("reroll_cost", 5)
     if phase == "pack":
-        s["pack"] = [_item(c, ("pack", i)) for i, c in enumerate(gs.get("pack_cards", []))]
+        s["pack"] = [_pack_item(c, i, gs) for i, c in enumerate(gs.get("pack_cards", []))]
         s["pack_picks"] = gs.get("pack_choices_remaining", 1)
     return s
 
@@ -297,6 +319,7 @@ class SimGame:
         self.selected: list[int] = []  # raw mode: hand cards clicked so far in this decision
         self.deselects = 0
         self.pending_pick: int | None = None  # pack slot of a targeted card awaiting its targets
+        self.pick_tries = 0
 
     @property
     def over(self) -> bool:
@@ -308,6 +331,10 @@ class SimGame:
             ph = _val(self.gs["phase"])
             if ph == "round_eval":
                 self.rounds_won += 1
+                # the game clears Cerulean Bell's flag in end_round; jackdaw keeps it on the card for later rounds
+                for area in ("deck", "hand", "play", "discard_pile"):
+                    for c in self.gs.get(area, []):
+                        c.ability.pop("forced_selection", None)
                 self.gs = engine.step(self.gs, CashOut())
                 continue
             s = canonical(self.gs)
@@ -315,10 +342,14 @@ class SimGame:
                 raise RuntimeError(f"unhandled phase {ph}")
             self.max_ante = max(self.max_ante, s["ante"])
             if game.RAW and s.get("hand"):
+                if s["phase"] == "hand":  # Cerulean Bell: the forced card starts (and stays) selected
+                    forced = [i for i, c in enumerate(s["hand"]) if c.get("forced") and i not in self.selected]
+                    self.selected = (forced + self.selected)[:5]
                 s["selected"] = list(self.selected)
                 s["sel_budget"] = game.SELECT_BUDGET - self.deselects
             if game.RAW and s["phase"] == "pack":
                 s["pending_pick"] = self.pending_pick
+                s["pick_tries"] = self.pick_tries
             return s
         return None
 
@@ -333,6 +364,7 @@ class SimGame:
             return True
         if a["t"] in ("choose_pick", "cancel_pick"):  # local: opens / closes target selection
             self.pending_pick = a["slot"] if a["t"] == "choose_pick" else None
+            self.pick_tries += a["t"] == "choose_pick"
             self.selected, self.deselects = [], 0
             return True
         try:
@@ -341,4 +373,6 @@ class SimGame:
             self.illegal += 1
             return False
         self.selected, self.deselects, self.pending_pick = [], 0, None
+        if a["t"] in ("skip_pack", "pick"):
+            self.pick_tries = 0  # each pick (a Mega pack's next one, a queued tag pack) gets fresh tries
         return True

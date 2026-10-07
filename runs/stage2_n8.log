@@ -8,3 +8,5 @@
 02:50:08 simloop (re)started: --batch 32 --lr 3e-6 --games 128 --test-games 128 --temperature 0.4
 03:02:02 simloop (re)started: --batch 32 --lr 3e-6 --games 128 --test-games 128 --temperature 0.4 --epochs 2
 03:17:24 simloop (re)started: --batch 32 --lr 3e-6 --games 128 --test-games 128 --temperature 0.4 --epochs 2 --group 4 --credit seed
+03:42:13 simloop (re)started: --batch 32 --lr 3e-6 --games 128 --test-games 128 --temperature 0.4 --epochs 2 --group 4 --credit seed
+03:51:26 simloop (re)started: --batch 32 --lr 3e-6 --games 128 --test-games 128 --temperature 0.4 --epochs 2 --group 4 --credit seed

@@ -156,7 +156,7 @@ index 513baea..73a1087 100644
    if not G or not G.STAGE or not G.STAGES or G.STAGE ~= G.STAGES.MAIN_MENU
        or not G.STATE or not G.STATES or G.STATE ~= G.STATES.MENU then
 diff --git a/mod/src/state.lua b/mod/src/state.lua
-index 2d200b1..6dcd9bd 100644
+index 2d200b1..f173408 100644
 --- a/mod/src/state.lua
 +++ b/mod/src/state.lua
 @@ -86,12 +86,17 @@ local function get_card_edition(card)
@@ -180,7 +180,16 @@ index 2d200b1..6dcd9bd 100644
      ['Wild Card'] = 'wild',
      ['Glass Card'] = 'glass',
      ['Steel Card'] = 'steel',
-@@ -339,6 +344,8 @@ local function serialize_joker(card, faced_down)
+@@ -290,6 +295,8 @@ local function serialize_playing_card(card, faced_down)
+     edition = get_card_edition(card),
+     seal = card.seal,
+     debuffed = card.debuff or nil,
++    -- Cerulean Bell: the game keeps this card highlighted; play/discard must include it
++    forced_selection = card.ability and card.ability.forced_selection or nil,
+     stickers = get_card_stickers(card),
+   }
+ end
+@@ -339,6 +346,8 @@ local function serialize_joker(card, faced_down)
      entity_id = card.config and card.config.center and card.config.center.key,
      rarity = card.config and card.config.center and card.config.center.rarity,
      live_description = get_card_description(card),
@@ -189,7 +198,7 @@ index 2d200b1..6dcd9bd 100644
      sell_value = card.sell_cost,
      edition = get_card_edition(card),
      stickers = get_card_stickers(card),
-@@ -1065,6 +1072,13 @@ local function snapshot()
+@@ -1065,6 +1074,13 @@ local function snapshot()
    if G.GAME and G.GAME.round_resets and G.GAME.round_resets.ante and G.GAME.round_resets.ante > 8 then
      payload.endless_mode = true
    end

@@ -81,6 +81,8 @@ def card_str(c: dict) -> str:
     extras = [x for x in (c.get("enh"), c.get("ed"), c.get("seal") and f"{c['seal']} seal") if x]
     if c.get("debuff"):
         extras.append("debuffed")
+    if c.get("forced"):  # Cerulean Bell: always selected
+        extras.append("forced")
     return s + (f"({','.join(extras)})" if extras else "")
 
 
@@ -335,23 +337,43 @@ def card_labels(hand: list[dict]) -> list[str]:
     return [f"{n} #{i + 1}" if dup[n] > 1 else n for i, n in enumerate(names)]
 
 
-def _clicks(state: dict) -> list[dict]:
+def _clicks(state: dict, cap: int = 5) -> list[dict]:
+    """Select/deselect clicks; at most `cap` cards selected (5 for a hand, a card's target count in packs).
+    A forced card (Cerulean Bell) is selected by the runner and counts toward the cap."""
     sel = state.get("selected", [])
+    hand = state.get("hand", [])
     out = []
-    for i in range(len(state.get("hand", []))):
+    for i in range(len(hand)):
         if i in sel:
-            if state.get("sel_budget", SELECT_BUDGET) > 0:
+            if state.get("sel_budget", SELECT_BUDGET) > 0 and not hand[i].get("forced"):
                 out.append({"t": "deselect", "card": i, "raw": True})
-        elif len(sel) < 5:
+        elif len(sel) < cap:
             out.append({"t": "select", "card": i, "raw": True})
     return out
 
 
-def _targets_ok(key: str, sel: list[int]) -> bool:
+PICK_TRIES = 2  # target selections a pack may open; a take/cancel cycle cannot repeat forever
+
+
+def _targets_ok(state: dict, key: str, sel: list[int]) -> bool:
+    if key == "c_aura" and any(state["hand"][i].get("ed") for i in sel):  # Aura needs an editionless card
+        return False
     return MIN_TARGETS.get(key, 1) <= len(sel) <= TARGETS[key]
 
 
+def _offerable(state: dict, a: dict) -> bool:
+    """False for moves the game greys out: a consumable it cannot use now (Judgement with full jokers,
+    The Fool with nothing to copy...), a pack card with nowhere to go."""
+    if a["t"] == "use":
+        return bool(state["consumables"][a["slot"]].get("usable", True))
+    return not (a["t"] == "pick" and a["item"].get("blocked"))
+
+
 def raw_candidates(state: dict) -> list[dict]:
+    return [a for a in _raw_moves(state) if _offerable(state, a)]
+
+
+def _raw_moves(state: dict) -> list[dict]:
     """Primitive moves: click cards, then commit them. Shop and blind moves are already primitive."""
     ph = state["phase"]
     sel = list(state.get("selected", []))
@@ -365,7 +387,7 @@ def raw_candidates(state: dict) -> list[dict]:
             key = c.get("key", "")
             if key not in TARGETS:
                 out.append({"t": "use", "slot": i, "key": key, "raw": True})
-            elif _targets_ok(key, sel):
+            elif _targets_ok(state, key, sel):
                 out.append({"t": "use", "slot": i, "key": key, "targets": sel, "raw": True})
         return out
     if ph == "pack":
@@ -374,18 +396,20 @@ def raw_candidates(state: dict) -> list[dict]:
         if pend is not None and pend < len(items):
             # Second step of a targeted pack card: click hand cards, then apply (or cancel).
             it = items[pend]
-            out = _clicks(state)
-            if _targets_ok(it.get("key", ""), sel):
+            out = _clicks(state, cap=TARGETS.get(it.get("key", ""), 1))
+            if _targets_ok(state, it.get("key", ""), sel):
                 out.append({"t": "pick", "slot": pend, "item": it, "targets": sel, "raw": True})
             out.append({"t": "cancel_pick", "slot": pend, "item": it, "raw": True})
             return out
         out = []
+        full = len(state.get("jokers", [])) >= state.get("joker_slots", 5)
         for i, it in enumerate(items):
             key = it.get("key", "")
-            if it["kind"] == "joker" and len(state.get("jokers", [])) >= state.get("joker_slots", 5):
+            if it["kind"] == "joker" and full and it.get("ed") != "negative":  # a Negative joker brings its slot
                 continue
             if key in TARGETS:  # always visible: choosing it opens target selection
-                if state.get("hand"):
+                if (len(state.get("hand", [])) >= MIN_TARGETS.get(key, 1)
+                        and state.get("pick_tries", 0) < PICK_TRIES):
                     out.append({"t": "choose_pick", "slot": i, "item": it, "raw": True})
             else:
                 out.append({"t": "pick", "slot": i, "item": it, "raw": True})

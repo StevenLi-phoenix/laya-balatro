@@ -6,7 +6,7 @@ Laya clicks like a player (`select K♥` ... `play selected`): one choice questi
 
 Kickoff (teacher clicks, held-out games): agreement 37.7% before -> **72.0%** after (hand 71.2%, shop 66.0%, pack 83.3%).
 
-RL: 8 iterations, champion **raw0008.pt**.
+RL: 10 iterations, champion **raw0010.pt**.
 
 ![rl](stage2_rl.png)
 
@@ -20,6 +20,8 @@ RL: 8 iterations, champion **raw0008.pt**.
 | 6 | 3.10 | 3.19 | 4.49 | -3.4 | raw0002.pt |
 | 7 | 3.48 | 6.09 | 5.16 | +2.8 | raw0007.pt |
 | 8 | 3.20 | 6.02 | 5.20 | +2.5 | raw0008.pt |
+| 9 | 3.86 | 5.91 | 5.59 | +0.9 | raw0008.pt |
+| 10 | 3.04 | 5.25 | 4.69 | +1.7 | raw0010.pt |
 
 Real Balatro validation:
 
@@ -28,6 +30,7 @@ Real Balatro validation:
 | raw_init.pt | 4 | 0.25 | 1 | 1.0 | 0 | 4/4 |
 | raw0002.pt | 12 | 5.33 | 12 | 2.5 | 0 | 11/12 |
 | raw0007.pt | 3 | 9.00 | 11 | 3.3 | 0 | 3/3 |
+| raw0008.pt | 6 | 2.17 | 7 | 1.3 | 0 | 5/6 |
 
 ![real2](stage2_real.png)
 

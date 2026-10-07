@@ -38,7 +38,8 @@ def torch_empty() -> None:
 
 
 def log(msg: str) -> None:
-    line = time.strftime("%H:%M:%S ") + msg
+    now = time.time()
+    line = time.strftime("%H:%M:%S", time.localtime(now)) + f".{int(now * 1000) % 1000:03d} " + msg
     print(line, flush=True)
     with open(RUNS / "evolve.log", "a", encoding="utf8") as f:
         f.write(line + "\n")
@@ -104,6 +105,7 @@ def play_run(b: Bridge, pol, gen: int, run_id: str, args) -> dict:
     sel_ids: list = []  # raw mode: ids of hand cards clicked in this decision
     deselects, clicked = 0, False
     pending_pick = None  # raw mode: pack slot of a targeted card awaiting its targets
+    pick_tries = local_run = 0  # target selections opened in this pack; clicks since the last game action
     dec_f = open(RUNS / "decisions" / f"{run_id}.jsonl", "w", encoding="utf8")
     for _ in range(args.max_decisions):
         if not clicked:  # a click changes nothing in the game, so the last payload is still current
@@ -154,10 +156,15 @@ def play_run(b: Bridge, pol, gen: int, run_id: str, args) -> dict:
         if game.RAW and s.get("hand"):
             ids = [c.get("id") for c in s["hand"]]
             sel_ids = [x for x in sel_ids if x in ids]
+            if s["phase"] == "hand":  # Cerulean Bell: the forced card starts (and stays) selected
+                sel_ids = ([c["id"] for c in s["hand"] if c.get("forced") and c["id"] not in sel_ids] + sel_ids)[:5]
             s["selected"] = [ids.index(x) for x in sel_ids]
             s["sel_budget"] = game.SELECT_BUDGET - deselects
         if game.RAW and s["phase"] == "pack":
             s["pending_pick"] = pending_pick if pending_pick is not None and pending_pick < len(s.get("pack", [])) else None
+            s["pick_tries"] = pick_tries
+        elif pick_tries:
+            pick_tries = 0
         cands = live_candidates(s)
         txt = game.state_text(s)
         repeat = repeat + 1 if txt == last_txt else 0
@@ -178,7 +185,15 @@ def play_run(b: Bridge, pol, gen: int, run_id: str, args) -> dict:
         idx, probs = pol.choose(s["phase"], txt, opts, temperature=args.temperature,
                                 greedy=getattr(args, "greedy", False))
         a = acts[idx]
+        if a["t"] in ("select", "deselect", "choose_pick", "cancel_pick") and local_run >= 60:
+            # safety net: 60 clicks without a game action means a click loop; take an offered commit
+            idx = next((i for t in ("play", "discard", "pick", "cancel_pick", "skip_pack", "leave")
+                        for i, x in enumerate(acts) if x["t"] == t), idx)
+            a = acts[idx]
+            log(f"  click loop: forced {opts[idx]!r}")
         if a["t"] in ("select", "deselect", "choose_pick", "cancel_pick"):
+            local_run += 1
+            pick_tries += a["t"] == "choose_pick"
             if a["t"] == "select":
                 sel_ids.append(s["hand"][a["card"]].get("id"))
             elif a["t"] == "deselect":
@@ -194,12 +209,12 @@ def play_run(b: Bridge, pol, gen: int, run_id: str, args) -> dict:
             clicked = True
             d = {"gen": gen, "run": run_id, "step": len(decisions), "round": round_idx, "phase": s["phase"],
                  "ante": s.get("ante"), "state": txt, "options": opts, "label": idx, "probs": probs,
-                 "round_won": False}
+                 "round_won": False, "ts": round(time.time(), 3)}
             decisions.append(d)
             dec_f.write(json.dumps(d, ensure_ascii=False) + "\n")
             log(f"[g{gen} a{s['ante']} {s['phase']}] -> {opts[idx]} (p={probs[idx]:.2f})")
             continue
-        sel_ids, deselects, pending_pick = [], 0, None
+        t_act = time.time()  # when the move is sent (captions sync to this, not to when its animation ends)
         try:
             res = execute(b, s, a)
             if a["t"] == "play" and isinstance(res, dict):
@@ -227,11 +242,15 @@ def play_run(b: Bridge, pol, gen: int, run_id: str, args) -> dict:
             log(f"  invalid {opts[idx]!r}: {e.code} {e.message[:100]}")
             continue
         busy = streak = 0
+        # like SimGame.apply: a rejected move keeps the selection; each pick gets fresh target tries
+        sel_ids, deselects, pending_pick, local_run = [], 0, None, 0
+        if a["t"] in ("pick", "skip_pack"):
+            pick_tries = 0
         if repeat >= 4:
             banned.add((txt, opts[idx]))
         d = {"gen": gen, "run": run_id, "step": len(decisions), "round": round_idx, "phase": s["phase"],
              "ante": s.get("ante"), "state": txt, "options": opts, "label": idx, "probs": probs,
-             "round_won": False}
+             "round_won": False, "ts": round(t_act, 3)}
         decisions.append(d)
         dec_f.write(json.dumps(d, ensure_ascii=False) + "\n")
         dec_f.flush()

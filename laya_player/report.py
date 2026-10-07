@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import json
+import random
 import re
 import statistics as st
 from pathlib import Path
@@ -114,8 +115,19 @@ def rl_curve(its: list[dict]) -> None:
     mean of every head-to-head score the reigning champion has posted."""
     fig, ax = plt.subplots(figsize=(10, 4.2))
     x = [r["iter"] for r in its]
-    ax.scatter(x, [r["test_rounds"] for r in its], s=14, c="#4a7bd0", label="new weights, greedy (fresh seeds)")
-    ax.scatter(x, [r["train_rounds"] for r in its], s=8, c="#bbbbbb", label="self-play games (sampled)")
+    rng = random.Random(0)
+    jit = lambda i, n, off: [i + off + rng.uniform(-0.11, 0.11) for _ in range(n)]
+    for i, r in zip(x, its):  # every game, when the iteration recorded them (older ones kept means only)
+        if r.get("train_games"):
+            ax.scatter(jit(i, len(r["train_games"]), -0.25), r["train_games"], s=3, c="#bbbbbb", alpha=0.5, lw=0)
+            ax.scatter(jit(i, len(r["champion_games"]), 0.0), r["champion_games"], s=3, c="#e8a0a0", alpha=0.5, lw=0)
+            ax.scatter(jit(i, len(r["test_games"]), 0.25), r["test_games"], s=3, c="#7fa3e0", alpha=0.6, lw=0)
+    ax.scatter([i - 0.25 for i in x], [r["train_rounds"] for r in its], s=16, c="#888888", marker="_",
+               label="self-play games (sampled): each game + mean")
+    ax.scatter([i + 0.25 for i in x], [r["test_rounds"] for r in its], s=18, c="#4a7bd0",
+               label="new weights, greedy: each game + mean")
+    ax.scatter(x, [r["champion_rounds"] for r in its], s=14, c="#d04a4a", marker="x",
+               label="champion on the same seeds: each game + mean")
     scores: dict[str, list[float]] = {}
     before, line = "raw_init.pt", []
     for r in its:
@@ -130,7 +142,7 @@ def rl_curve(its: list[dict]) -> None:
     ax.text(x[0], base - 0.45, f"raw_init (kickoff imitation) {base:.2f}", fontsize=8, color="#666")
     ax.axhline(9.01, c="#d9a0a0", lw=0.8, ls="--")
     ax.text(x[0], 9.1, "Stage 1 champion sim0053 9.01 (combo actions, fixed seeds)", fontsize=8, color="#b07070")
-    top = max(9.5, max(r["test_rounds"] for r in its) + 0.8)
+    top = max([9.5] + [max(r.get("test_games") or [0]) + 0.8 for r in its] + [max(r.get("train_games") or [0]) + 0.8 for r in its])
     for at, txt in _setting_changes(its):
         ax.axvline(at, c="k", ls=":", lw=0.8)
         ax.text(at - 0.15, 0.3, txt, fontsize=7, ha="right", rotation=90, va="bottom")

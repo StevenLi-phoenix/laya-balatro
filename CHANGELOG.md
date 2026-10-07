@@ -13,7 +13,20 @@
   there; the adapter mapped targets through `gs["pack_hand"]`, so every simulated pack tarot (Stage 1 included) was
   applied to other cards than chosen. Verified: Magician on K♣ → K♣ Lucky, Tower on 10♥ → 10♥ Stone, Hanged Man
   on 10♠ → 10♠ destroyed.
-- Video captions merge clicks that land in the same second (no stacked subtitles).
+- Video captions come from millisecond send times recorded on every decision (`ts`); within a decision the caption
+  grows click by click. The log shows milliseconds.
+- **Click-interface audit** (1,700 simulated runs with worst-case click policies, then fixes verified on 1,900):
+  engine rejections 4,521 → 0, dead-ended runs 99 → 0, no infinite loops (longest click run: 25 in hand, 50 in a pack).
+  - Cerulean Bell: the forced card is shown `(forced)`, starts selected and cannot be deselected (sim + mod + runner);
+    jackdaw's forced flag is cleared at end of round like the real game.
+  - Mega packs and back-to-back tag packs no longer inherit the take/cancel limit.
+  - Consumables the game greys out (Judgement with full jokers, The Fool with nothing to copy, …) and blocked pack
+    cards are no longer offered; Aura is not offered on cards that already have an edition; Negative jokers can be
+    taken with full slots; choose needs enough hand cards.
+  - A rejected move keeps the selection in the real game too (matches the simulator).
+  - Take/cancel loop on The Hierophant (832 cancels in one pack): target clicks capped at the card's target count,
+    2 target selections per pick, 60-click safety net in the real-game runner.
+- RL iterations record every game (self-play, new weights, champion per seed); the Stage 2 chart plots all of them.
 
 ## v1.1 — Stage 2: raw clicks, pure RL (2026-10-07)
 

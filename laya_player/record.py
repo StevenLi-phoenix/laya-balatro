@@ -1,14 +1,14 @@
 """Record one real Balatro run played by Laya, with its decisions burned in as subtitles.
 
-ffmpeg captures the game window (gdigrab) while `evolve.play_run` plays; the evolve.log lines
-written during the run become an .srt, and the final cut is sped up with subtitles retimed.
+ffmpeg captures the game window while `evolve.play_run` plays; the run's decision records carry
+millisecond send times, which become the .srt; the final cut is sped up with subtitles retimed.
 
   python -m laya_player.record --seed 71SHDI9E --speed 4
 """
 from __future__ import annotations
 
 import argparse
-import datetime as dt
+import json
 import re
 import subprocess
 import time
@@ -18,7 +18,6 @@ from . import evolve, realloop
 from .bridge import Bridge
 
 ROOT = Path(__file__).resolve().parent.parent
-LINE = re.compile(r"^(\d\d:\d\d:\d\d) \[g-1 (a\d+ \S+)\] (?:(\S+) )?-> (.*?)(?: \(p=([\d.]+)\))?$")
 
 
 def srt_time(s: float) -> str:
@@ -26,29 +25,26 @@ def srt_time(s: float) -> str:
     return f"{ms // 3600000:02d}:{ms // 60000 % 60:02d}:{ms // 1000 % 60:02d},{ms % 1000:03d}"
 
 
-def build_srt(log_lines: list[str], t0: dt.datetime, speed: float, out: Path) -> int:
-    events = []
-    for l in log_lines:
-        m = LINE.match(l.strip())
-        if not m:
+def build_srt(decisions: list[dict], t0: float, speed: float, out: Path) -> int:
+    """Captions from the decision records' millisecond timestamps (`ts`, when each move was sent).
+    Within one decision the caption grows click by click and resets after the committing move,
+    so captions never overlap."""
+    events, chain = [], []
+    for d in decisions:
+        if "ts" not in d:
             continue
-        hh, mm, ss = map(int, m[1].split(":"))
-        t = t0.replace(hour=hh, minute=mm, second=ss)
-        if t < t0:
-            t += dt.timedelta(days=1)
-        where, score, act, p = m[2], m[3], m[4], m[5]
-        sec = (t - t0).total_seconds() / speed
-        if events and events[-1][0] == sec and events[-1][2] == where:
-            # clicks land several per second: one caption per second, not a stack of overlapping ones
-            events[-1] = (sec, events[-1][1] + f" · {act}", where)
-            continue
-        head = f"{where.replace('a', 'Ante ', 1)}{'  ' + score if score else ''}"
-        events.append((sec, f"{head}\nLaya: {act}" + (f"  (p={p})" if p else ""), where))
-    events = [(s, txt) for s, txt, _ in events]
+        act, p = d["options"][d["label"]], d["probs"][d["label"]]
+        m = re.search(r"Score (\d+)/(\d+)", d["state"])
+        head = f"Ante {d['ante']} {d['phase']}" + (f"  {m[1]}/{m[2]}" if m and d["phase"] == "hand" else "")
+        click = act.startswith(("select ", "deselect ", "cancel ")) or "(then choose" in act
+        chain.append(f"{act} ({p:.2f})")
+        events.append(((d["ts"] - t0) / speed, f"{head}\nLaya: " + " · ".join(chain[-6:])))
+        if not click:
+            chain = []
     with open(out, "w", encoding="utf8") as f:
-        for i, (s, text) in enumerate(events):
-            e = events[i + 1][0] if i + 1 < len(events) else s + 3
-            f.write(f"{i + 1}\n{srt_time(s)} --> {srt_time(max(s + 0.5, e))}\n{text}\n\n")
+        for i, (st, text) in enumerate(events):
+            en = events[i + 1][0] if i + 1 < len(events) else st + 3
+            f.write(f"{i + 1}\n{srt_time(max(0.0, st))} --> {srt_time(max(st + 0.25, en))}\n{text}\n\n")
     return len(events)
 
 
@@ -88,6 +84,7 @@ def main():
     ap.add_argument("--out", default=str(ROOT / "runs" / "video" / "laya_balatro.mp4"))
     ap.add_argument("--device", default="cpu")
     ap.add_argument("--ckpt", default=None)
+    ap.add_argument("--capture-lag", type=float, default=0.5, help="seconds ffmpeg takes to deliver its first frame")
     args = ap.parse_args()
     from .policy import Policy
 
@@ -101,8 +98,6 @@ def main():
     except OSError:
         b = evolve.restart_game()
     (evolve.RUNS / "decisions").mkdir(parents=True, exist_ok=True)
-    log_f = evolve.RUNS / "evolve.log"
-    n0 = sum(1 for _ in open(log_f, encoding="utf8")) if log_f.exists() else 0
     run_args = argparse.Namespace(fresh=True, deck="b_red", stake=1, seed=args.seed, max_decisions=10000,
                                   greedy=True, temperature=0.3)
     run_id = f"video_{Path(ck).stem}_{args.seed}_{time.strftime('%m%d_%H%M%S')}"
@@ -112,15 +107,15 @@ def main():
                                f"ddagrab=output_idx=0:framerate=30:offset_x={x}:offset_y={y}:video_size={w}x{h}",
                                "-vf", "hwdownload,format=bgra,format=yuv420p", "-c:v", "libx264", "-preset",
                                "ultrafast", str(raw)], stdin=subprocess.PIPE)
-        t0 = dt.datetime.now().replace(microsecond=0)
+        t0 = time.time() + args.capture_lag  # first captured frame ~ when ffmpeg is up
         time.sleep(1)
         try:
             summary, _ = evolve.play_run(b, pol, -1, run_id, run_args)
             time.sleep(4)  # keep the game-over screen
         finally:
             ff.communicate(b"q", timeout=60)
-    lines = open(log_f, encoding="utf8").read().splitlines()[n0:]
-    n = build_srt(lines, t0, args.speed, srt)
+    decisions = [json.loads(l) for l in open(evolve.RUNS / "decisions" / f"{run_id}.jsonl", encoding="utf8")]
+    n = build_srt(decisions, t0, args.speed, srt)
     title = (f"Laya (421M ModernBERT decision model) plays Balatro - {Path(ck).stem}, seed {summary.get('seed')}, "
              f"{args.speed:g}x speed").replace(":", r"\:").replace("'", "")
     # Windows ffmpeg builds have no fontconfig default: name the font file / folder explicitly

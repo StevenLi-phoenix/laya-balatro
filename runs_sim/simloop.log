@@ -12,3 +12,9 @@
 03:17:02 iter 7: train 3.48 | test 6.09 vs champion 5.16 (t +2.8) NEW | 16317 dec, play 133s train 425s test 339s
 03:17:26 start: champion raw0007.pt, actions raw
 03:28:51 iter 8: train 3.20 | test 6.02 vs champion 5.20 (t +2.5) NEW | 9979 dec, play 115s train 241s test 329s
+03:41:53 iter 9: train 3.86 | test 5.91 vs champion 5.59 (t +0.9) | 12504 dec, play 132s train 309s test 340s
+03:42:15 start: champion raw0008.pt, actions raw
+03:51:28 start: champion raw0008.pt, actions raw
+04:02:08 iter 10: train 3.04 | test 5.25 vs champion 4.69 (t +1.7) NEW | 9326 dec, play 106s train 223s test 311s
+04:15:36 iter 11: train 4.06 | test 5.36 vs champion 5.39 (t -0.1) | 12769 dec, play 137s train 337s test 334s
+04:27:30 iter 12: train 3.40 | test 4.99 vs champion 5.23 (t -0.7) | 10887 dec, play 131s train 277s test 306s

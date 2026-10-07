@@ -180,8 +180,8 @@ def rand_seeds(n: int) -> list[str]:
     return ["".join(random.choices(abc, k=8)) for _ in range(n)]
 
 
-def head_to_head(pol, champion: str, work: Path, n: int) -> tuple[float, float, float]:
-    """Working weights vs the champion on the same n fresh seeds -> (mine, theirs, paired t)."""
+def head_to_head(pol, champion: str, work: Path, n: int) -> tuple[list[int], list[int], float]:
+    """Working weights vs the champion on the same n fresh seeds -> (mine, theirs per seed, paired t)."""
     seeds = rand_seeds(n)
     mine = play(pol, seeds, 0.3, True, False)[0]
     pol.save(str(work))
@@ -190,7 +190,7 @@ def head_to_head(pol, champion: str, work: Path, n: int) -> tuple[float, float, 
     pol.load(str(work))
     d = [a["rounds_won"] - b["rounds_won"] for a, b in zip(mine, theirs)]
     se = (statistics.pstdev(d) or 1.0) / len(d) ** 0.5
-    return score(mine), score(theirs), statistics.mean(d) / se
+    return [x["rounds_won"] for x in mine], [x["rounds_won"] for x in theirs], statistics.mean(d) / se
 
 
 def main():
@@ -228,8 +228,10 @@ def main():
         t1 = time.time()
         pol.train(dec, epochs=args.epochs, batch_size=args.batch, lr=args.lr, log=lambda m: None)
         t2 = time.time()
-        mine, theirs, t = head_to_head(pol, st["champion"], work, args.test_games)
+        mine_g, theirs_g, t = head_to_head(pol, st["champion"], work, args.test_games)
+        mine, theirs = statistics.mean(mine_g), statistics.mean(theirs_g)
         rec = {"iter": it, "train_rounds": score(summ), "test_rounds": mine, "champion_rounds": theirs, "t": round(t, 2),
+               "train_games": [x["rounds_won"] for x in summ], "test_games": mine_g, "champion_games": theirs_g,
                "decisions": len(dec), "play_s": round(t1 - t0), "train_s": round(t2 - t1),
                "test_s": round(time.time() - t2)}
         improved = mine > theirs and t >= args.promote_t

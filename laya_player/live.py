@@ -48,17 +48,23 @@ def _card(c: dict) -> dict:
     if c.get("faced_down"):
         return {"id": c.get("card_id"), "hidden": True, "rank": "?", "suit": "?"}
     r = str(c.get("rank") or "?")
-    return {"id": c.get("card_id"), "rank": RANK_MAP.get(r, r), "suit": SUIT_MAP.get(c.get("suit"), "?"),
-            "enh": c.get("enhancement"), "ed": c.get("edition"), "seal": (c.get("seal") or None),
-            "debuff": bool(c.get("debuffed"))}
+    d = {"id": c.get("card_id"), "rank": RANK_MAP.get(r, r), "suit": SUIT_MAP.get(c.get("suit"), "?"),
+         "enh": c.get("enhancement"), "ed": c.get("edition"), "seal": (c.get("seal") or None),
+         "debuff": bool(c.get("debuffed"))}
+    if c.get("forced_selection"):  # Cerulean Bell (mod state.lua serialize_playing_card)
+        d["forced"] = True
+    return d
 
 
 def _item(x: dict) -> dict:
     kind = x.get("kind")
     if kind == "playing_card":
         return {"id": x.get("card_id"), "kind": "card", "card": _card(x), "cost": x.get("cost", 0)}
-    return {"id": x.get("card_id"), "kind": kind if kind != "consumable" else "tarot", "key": x.get("entity_id"),
-            "cost": x.get("cost", 0), "ed": x.get("edition"), "usable": x.get("usable", True)}
+    it = {"id": x.get("card_id"), "kind": kind if kind != "consumable" else "tarot", "key": x.get("entity_id"),
+          "cost": x.get("cost", 0), "ed": x.get("edition"), "usable": x.get("usable", True)}
+    if x.get("usable") is False and it["key"] not in game.TARGETS:  # untargeted pack card the game greys out
+        it["blocked"] = True
+    return it
 
 
 def canonical(p: dict) -> dict | None:
