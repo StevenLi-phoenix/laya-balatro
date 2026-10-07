@@ -83,10 +83,34 @@ def _pack_item(c, i: int, gs: dict) -> dict:
     return it
 
 
-def _joker_desc(j) -> str:
-    from .desc import describe
+def _frame_ability(j, gs: dict) -> dict:
+    """Ability values the real game recomputes every frame (card.lua Card:update) while jackdaw only
+    computes them when scoring. Descriptions must show the real game's numbers: a Cloud 9 shown as
+    "(Currently $0)" instead of "$4" flipped a near-tie on seed TZIUSW9J (real 1 round, sim 19)."""
     ab = dict(j.ability) if isinstance(j.ability, dict) else {}
-    return describe(j.center_key, ab)
+    k = j.center_key
+    owned = gs.get("deck", []) + gs.get("hand", []) + gs.get("discard_pile", [])  # G.playing_cards
+    if k == "j_cloud_9":
+        ab["nine_tally"] = sum(1 for c in owned if c.get_id() == 9)
+    elif k == "j_steel_joker":
+        ab["steel_tally"] = sum(1 for c in owned if c.center_key == "m_steel")
+    elif k == "j_stone":
+        ab["stone_tally"] = sum(1 for c in owned if c.center_key == "m_stone")
+    elif k == "j_drivers_license":
+        ab["driver_tally"] = sum(1 for c in owned if c.center_key not in ("", "c_base"))
+    elif k == "j_stencil":
+        jokers = gs.get("jokers", [])
+        ab["x_mult"] = gs.get("joker_slots", 5) - len(jokers) + sum(x.center_key == "j_stencil" for x in jokers)
+    elif k == "j_swashbuckler":
+        ab["mult"] = sum(x.sell_cost for x in gs.get("jokers", []) if x is not j)
+    elif k == "j_throwback":
+        ab["x_mult"] = 1 + gs.get("skips", 0) * ab.get("extra", 0)
+    return ab
+
+
+def _joker_desc(j, gs: dict) -> str:
+    from .desc import describe
+    return describe(j.center_key, _frame_ability(j, gs))
 
 
 def _deck_counts(deck) -> dict:
@@ -120,7 +144,7 @@ def canonical(gs: dict) -> dict | None:
     s["hand"] = [_card(hand[i]) for i in order] if phase in ("hand", "pack") else []
     s["_hidx"] = order
     s["jokers"] = [{"key": j.center_key, "sell": j.sell_cost, "ed": _edition(j), "eternal": bool(j.eternal),
-                    "desc": _joker_desc(j)} for j in gs.get("jokers", [])]
+                    "desc": _joker_desc(j, gs)} for j in gs.get("jokers", [])]
     s["vouchers"] = sorted(k for k, v in (gs.get("used_vouchers") or {}).items() if v)
     s["deck_counts"] = _deck_counts(gs.get("deck", []))
     s["consumables"] = [{"key": c.center_key, "usable": _usable(c, gs)} for c in gs.get("consumables", [])]

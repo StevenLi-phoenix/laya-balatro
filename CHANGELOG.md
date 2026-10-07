@@ -30,6 +30,11 @@
   and in hand order in the simulator; on seed U919ZL9K the differing line flipped a near-tie (play 0.47 vs discard
   0.52) at decision 36 and the runs ended at 14 vs 8 rounds. Ties now sort by hand order on both sides; with that, the
   simulator replays the real run exactly (329/329 decisions, 14 rounds).
+- **Sim/real prompt mismatch: per-frame joker values.** The real game recomputes Cloud 9, Steel Joker, Stone Joker,
+  Driver's License, Joker Stencil, Swashbuckler and Throwback values every frame (card.lua `Card:update`); jackdaw only
+  when scoring, so their descriptions read e.g. "(Currently $0)" instead of "$4". On seed TZIUSW9J that flipped a
+  near-tie click and the runs ended at 1 vs 19 rounds; the simulator now computes the same values (replays 1 round).
+- Self-play sampling temperature 0.4 → 0.3 (sampled games had slid to ~2 rounds while greedy held ~5–6).
 - RL iterations record every game (self-play, new weights, champion per seed); the Stage 2 chart plots all of them.
 
 ## v1.1 — Stage 2: raw clicks, pure RL (2026-10-07)
