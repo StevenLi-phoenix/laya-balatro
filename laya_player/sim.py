@@ -90,14 +90,11 @@ def canonical(gs: dict) -> dict | None:
          "hands_left": cr.get("hands_left", 0), "discards_left": cr.get("discards_left", 0),
          "joker_slots": gs.get("joker_slots", 5), "consumable_slots": gs.get("consumable_slots", 2),
          "deck_left": len(gs.get("deck", []))}
-    hand = gs.get("pack_hand") if phase == "pack" and gs.get("pack_hand") else gs.get("hand", [])
+    # Opening an Arcana/Spectral pack deals into gs["hand"] (sorted like the real game's pack hand),
+    # and pack-card targets index that list. Mapping through gs["pack_hand"] instead sent every
+    # pack tarot to the wrong cards.
+    hand = gs.get("hand", [])
     order = list(range(len(hand)))
-    if phase == "pack" and hand:
-        # the real game shows a freshly drawn pack hand sorted like any hand
-        shown = list(hand)
-        engine._sort_hand_desc(shown)
-        pos = {id(c): i for i, c in enumerate(hand)}
-        order = [pos[id(c)] for c in shown]
     s["hand"] = [_card(hand[i]) for i in order] if phase in ("hand", "pack") else []
     s["_hidx"] = order
     s["jokers"] = [{"key": j.center_key, "sell": j.sell_cost, "ed": _edition(j), "eternal": bool(j.eternal),
@@ -299,6 +296,7 @@ class SimGame:
         self.steps = 0
         self.selected: list[int] = []  # raw mode: hand cards clicked so far in this decision
         self.deselects = 0
+        self.pending_pick: int | None = None  # pack slot of a targeted card awaiting its targets
 
     @property
     def over(self) -> bool:
@@ -319,6 +317,8 @@ class SimGame:
             if game.RAW and s.get("hand"):
                 s["selected"] = list(self.selected)
                 s["sel_budget"] = game.SELECT_BUDGET - self.deselects
+            if game.RAW and s["phase"] == "pack":
+                s["pending_pick"] = self.pending_pick
             return s
         return None
 
@@ -331,10 +331,14 @@ class SimGame:
             self.selected.remove(a["card"])
             self.deselects += 1
             return True
+        if a["t"] in ("choose_pick", "cancel_pick"):  # local: opens / closes target selection
+            self.pending_pick = a["slot"] if a["t"] == "choose_pick" else None
+            self.selected, self.deselects = [], 0
+            return True
         try:
             self.gs = engine.step(self.gs, to_engine(s, a))
         except (IllegalActionError, IndexError, KeyError, ValueError):
             self.illegal += 1
             return False
-        self.selected, self.deselects = [], 0
+        self.selected, self.deselects, self.pending_pick = [], 0, None
         return True

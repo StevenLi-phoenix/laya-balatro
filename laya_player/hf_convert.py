@@ -218,6 +218,10 @@ def raw_examples(s: dict, teacher: dict, rng: random.Random) -> list[dict]:
         tk = game.action_key(dict(teacher, cards=sel, targets=sel) if t in ("use", "pick") else dict(teacher, cards=sel))
         ex = _raw_example(st, lambda a: game.action_key(a) == tk, rng)
         return out + [ex] if ex else []
+    if t == "pick" and teacher.get("item", {}).get("key") in game.TARGETS:
+        # The dataset records which pack card was taken but not its targets: teach the first click only.
+        ex = _raw_example(s, lambda a: a["t"] == "choose_pick" and a["slot"] == teacher["slot"], rng)
+        return [ex] if ex else []
     tk = game.action_key(teacher)
     ex = _raw_example(s, lambda a: game.action_key(a) == tk, rng)
     return [ex] if ex else []

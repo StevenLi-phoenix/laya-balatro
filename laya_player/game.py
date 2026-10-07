@@ -44,7 +44,8 @@ HAND_BASE = {  # level-1 chips, mult; per-level increments
 
 # Consumables that need hand targets: key -> max cards.
 TARGETS = {
-    "c_magician": 2, "c_empress": 2, "c_hierophant": 2, "c_lovers": 1, "c_chariot": 1, "c_justice": 1,
+    "c_magician": 2, "c_empress": 2, "c_hierophant": 2, "c_heirophant": 2,  # the game spells it heirophant
+    "c_lovers": 1, "c_chariot": 1, "c_justice": 1,
     "c_strength": 2, "c_hanged_man": 2, "c_death": 2, "c_devil": 1, "c_tower": 1, "c_star": 3,
     "c_moon": 3, "c_sun": 3, "c_world": 3, "c_aura": 1, "c_talisman": 1, "c_deja_vu": 1,
     "c_trance": 1, "c_medium": 1, "c_cryptid": 1,
@@ -368,19 +369,26 @@ def raw_candidates(state: dict) -> list[dict]:
                 out.append({"t": "use", "slot": i, "key": key, "targets": sel, "raw": True})
         return out
     if ph == "pack":
-        out, needs_hand = [], False
-        for i, it in enumerate(state.get("pack", [])):
+        items = state.get("pack", [])
+        pend = state.get("pending_pick")
+        if pend is not None and pend < len(items):
+            # Second step of a targeted pack card: click hand cards, then apply (or cancel).
+            it = items[pend]
+            out = _clicks(state)
+            if _targets_ok(it.get("key", ""), sel):
+                out.append({"t": "pick", "slot": pend, "item": it, "targets": sel, "raw": True})
+            out.append({"t": "cancel_pick", "slot": pend, "item": it, "raw": True})
+            return out
+        out = []
+        for i, it in enumerate(items):
             key = it.get("key", "")
             if it["kind"] == "joker" and len(state.get("jokers", [])) >= state.get("joker_slots", 5):
                 continue
-            if key in TARGETS:
-                needs_hand = True
-                if state.get("hand") and _targets_ok(key, sel):
-                    out.append({"t": "pick", "slot": i, "item": it, "targets": sel, "raw": True})
+            if key in TARGETS:  # always visible: choosing it opens target selection
+                if state.get("hand"):
+                    out.append({"t": "choose_pick", "slot": i, "item": it, "raw": True})
             else:
                 out.append({"t": "pick", "slot": i, "item": it, "raw": True})
-        if needs_hand and state.get("hand"):
-            out = _clicks(state) + out
         out.append({"t": "skip_pack"})
         return out
     if ph == "shop":  # targeted consumables cannot be used without a hand
@@ -453,6 +461,8 @@ def action_key(a: dict) -> tuple:
         return (t, tuple(sorted(a["cards"])))
     if t in ("select", "deselect"):
         return (t, a["card"])
+    if t in ("choose_pick", "cancel_pick"):
+        return (t, a["slot"])
     if t in ("buy", "sell_joker", "pick"):
         return (t, a["slot"], tuple(sorted(a.get("targets", []))))
     if t == "use":
@@ -486,6 +496,12 @@ def action_text(state: dict, a: dict) -> str:
         tg = " on selected" if a.get("targets") else ""
         if t == "use":
             return f"use {name_of(a['key'])}{tg}"
+        if t == "choose_pick":
+            return f"take {item_str(a['item'])} (then choose its target cards)"
+        if t == "cancel_pick":
+            return f"cancel {name_of(a['item'].get('key'))}"
+        if t == "pick" and a.get("targets"):
+            return f"apply {name_of(a['item'].get('key'))} to selected"
         if t == "pick":
             return f"take {item_str(a['item'])}{tg}"
     if t == "play":
@@ -582,6 +598,10 @@ def state_text(s: dict) -> str:
                                                   for k, v in sorted(lv.items(), key=lambda x: -x[1][0])))
     if s.get("hand"):
         lines.append("Hand: " + " ".join(card_str(x) for x in s["hand"]))
+        if s.get("pending_pick") is not None and ph == "pack":
+            it = s["pack"][s["pending_pick"]]
+            k = it.get("key", "")
+            lines.append(f"Using {_describe(k)}: select {MIN_TARGETS.get(k, 1)}-{TARGETS.get(k, 1)} hand cards, then apply")
         if "selected" in s:
             lines.append(selected_text(s))
         from .desc import card_legend

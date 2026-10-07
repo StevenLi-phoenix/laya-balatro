@@ -1,5 +1,20 @@
 # Changelog
 
+## v1.2 (unreleased)
+
+- **Targeted pack tarots are usable.** In v1.1 a targeted card in an Arcana/Spectral pack was only offered after
+  hand cards were selected, so Laya never saw it (19 such packs in real runs: 9 untargeted takes, 10 skips, 0 uses).
+  Now it is always visible as a two-step choice: `take tarot Strength (then choose its target cards)`, then
+  select/deselect hand cards and `apply Strength to selected` (or `cancel Strength`). Teacher pack picks of targeted
+  cards (the dataset has no targets) now teach the first step.
+- **Balatro spells The Hierophant `c_heirophant`**: added to the targeted list (it was offered without targets and
+  always rejected).
+- **Simulator: pack tarots hit the wrong cards.** jackdaw deals an opened pack into `gs["hand"]` and indexes targets
+  there; the adapter mapped targets through `gs["pack_hand"]`, so every simulated pack tarot (Stage 1 included) was
+  applied to other cards than chosen. Verified: Magician on K♣ → K♣ Lucky, Tower on 10♥ → 10♥ Stone, Hanged Man
+  on 10♠ → 10♠ destroyed.
+- Video captions merge clicks that land in the same second (no stacked subtitles).
+
 ## v1.1 — Stage 2: raw clicks, pure RL (2026-10-07)
 
 - **Raw action interface** (`LAYA_ACTIONS=raw`, now the default). Laya clicks like a player: each call is one

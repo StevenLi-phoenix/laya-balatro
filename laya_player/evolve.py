@@ -103,6 +103,7 @@ def play_run(b: Bridge, pol, gen: int, run_id: str, args) -> dict:
     tries: dict = {}
     sel_ids: list = []  # raw mode: ids of hand cards clicked in this decision
     deselects, clicked = 0, False
+    pending_pick = None  # raw mode: pack slot of a targeted card awaiting its targets
     dec_f = open(RUNS / "decisions" / f"{run_id}.jsonl", "w", encoding="utf8")
     for _ in range(args.max_decisions):
         if not clicked:  # a click changes nothing in the game, so the last payload is still current
@@ -155,6 +156,8 @@ def play_run(b: Bridge, pol, gen: int, run_id: str, args) -> dict:
             sel_ids = [x for x in sel_ids if x in ids]
             s["selected"] = [ids.index(x) for x in sel_ids]
             s["sel_budget"] = game.SELECT_BUDGET - deselects
+        if game.RAW and s["phase"] == "pack":
+            s["pending_pick"] = pending_pick if pending_pick is not None and pending_pick < len(s.get("pack", [])) else None
         cands = live_candidates(s)
         txt = game.state_text(s)
         repeat = repeat + 1 if txt == last_txt else 0
@@ -175,13 +178,15 @@ def play_run(b: Bridge, pol, gen: int, run_id: str, args) -> dict:
         idx, probs = pol.choose(s["phase"], txt, opts, temperature=args.temperature,
                                 greedy=getattr(args, "greedy", False))
         a = acts[idx]
-        if a["t"] in ("select", "deselect"):
-            cid = s["hand"][a["card"]].get("id")
+        if a["t"] in ("select", "deselect", "choose_pick", "cancel_pick"):
             if a["t"] == "select":
-                sel_ids.append(cid)
-            else:
-                sel_ids.remove(cid)
+                sel_ids.append(s["hand"][a["card"]].get("id"))
+            elif a["t"] == "deselect":
+                sel_ids.remove(s["hand"][a["card"]].get("id"))
                 deselects += 1
+            else:  # open / close target selection for a targeted pack card
+                pending_pick = a["slot"] if a["t"] == "choose_pick" else None
+                sel_ids, deselects = [], 0
             try:  # mirror the click on screen; the selection itself lives here
                 b.call("select_hand_cards", {"card_ids": list(sel_ids)})
             except BridgeError:
@@ -194,7 +199,7 @@ def play_run(b: Bridge, pol, gen: int, run_id: str, args) -> dict:
             dec_f.write(json.dumps(d, ensure_ascii=False) + "\n")
             log(f"[g{gen} a{s['ante']} {s['phase']}] -> {opts[idx]} (p={probs[idx]:.2f})")
             continue
-        sel_ids, deselects = [], 0
+        sel_ids, deselects, pending_pick = [], 0, None
         try:
             res = execute(b, s, a)
             if a["t"] == "play" and isinstance(res, dict):

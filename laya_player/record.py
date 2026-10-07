@@ -37,8 +37,14 @@ def build_srt(log_lines: list[str], t0: dt.datetime, speed: float, out: Path) ->
         if t < t0:
             t += dt.timedelta(days=1)
         where, score, act, p = m[2], m[3], m[4], m[5]
-        text = f"{where.replace('a', 'Ante ', 1)}{'  ' + score if score else ''}\nLaya: {act}" + (f"  (p={p})" if p else "")
-        events.append(((t - t0).total_seconds() / speed, text))
+        sec = (t - t0).total_seconds() / speed
+        if events and events[-1][0] == sec and events[-1][2] == where:
+            # clicks land several per second: one caption per second, not a stack of overlapping ones
+            events[-1] = (sec, events[-1][1] + f" · {act}", where)
+            continue
+        head = f"{where.replace('a', 'Ante ', 1)}{'  ' + score if score else ''}"
+        events.append((sec, f"{head}\nLaya: {act}" + (f"  (p={p})" if p else ""), where))
+    events = [(s, txt) for s, txt, _ in events]
     with open(out, "w", encoding="utf8") as f:
         for i, (s, text) in enumerate(events):
             e = events[i + 1][0] if i + 1 < len(events) else s + 3
