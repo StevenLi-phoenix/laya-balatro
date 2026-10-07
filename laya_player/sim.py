@@ -307,6 +307,16 @@ _FORCED: dict[int, list[str]] = {}
 _orig_get_new_boss = None
 
 
+def _sync_satellite(gs: dict) -> None:
+    """jackdaw's Satellite pays from ability["planet_types_used"], which nothing in jackdaw sets, so it
+    always paid $0; the real game pays $1 per distinct Planet used (seed 2IRGPA5L: $1 short, then a
+    different play). Keep the count in sync from the usage jackdaw does track."""
+    n = sum(1 for v in (gs.get("consumable_usage") or {}).values() if v.get("set") == "Planet")
+    for j in gs.get("jokers", []):
+        if j.center_key == "j_satellite":
+            j.ability["planet_types_used"] = n
+
+
 def _install_boss_hook() -> None:
     global _orig_get_new_boss
     from jackdaw.engine import blind as jblind
@@ -375,6 +385,7 @@ class SimGame:
                 for area in ("deck", "hand", "play", "discard_pile"):
                     for c in self.gs.get(area, []):
                         c.ability.pop("forced_selection", None)
+                _sync_satellite(self.gs)
                 self.gs = engine.step(self.gs, CashOut())
                 continue
             s = canonical(self.gs)
@@ -408,6 +419,7 @@ class SimGame:
             self.selected, self.deselects = [], 0
             return True
         try:
+            _sync_satellite(self.gs)
             self.gs = engine.step(self.gs, to_engine(s, a))
         except (IllegalActionError, IndexError, KeyError, ValueError):
             self.illegal += 1

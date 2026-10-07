@@ -52,6 +52,9 @@
   hidden cards last, so a hidden card's place reveals nothing; the simulator kept the rank-sorted order, where `??`
   between a 9 and a 6 must be a 7 or 8. Training learned from that leak and the runs diverged (seed C6HRB2UR: real 12
   vs sim 11; with the fix 12 = 12). The mod now compares ids numerically (text order broke at 999 → 1000).
+- **jackdaw's Satellite never paid out**: it reads `ability["planet_types_used"]`, which jackdaw never sets; the real
+  game pays $1 per distinct Planet used. The adapter now syncs the count from jackdaw's own consumable usage before
+  every engine step (seed 2IRGPA5L: sim $1 short from the first cash-out, real 2 vs sim 3; with the fix 2 = 2).
 - **First real-game win**: raw0032 on seed MST5TRB3 beat Ante 8 (Cerulean Bell, playable since the audit fixes) and
   reached round 26 in endless; simulator twin identical.
 - RL iterations record every game (self-play, new weights, champion per seed); the Stage 2 chart plots all of them.

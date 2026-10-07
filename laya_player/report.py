@@ -113,8 +113,8 @@ def _setting_changes(its: list[dict]) -> list[tuple[float, str]]:
 def rl_curve(its: list[dict]) -> None:
     """Stage 2 in the Stage 1 chart style. Seeds are fresh every iteration, so the champion line is the running
     mean of every head-to-head score the reigning champion has posted."""
-    fig, ax = plt.subplots(figsize=(10, 4.2))
     x = [r["iter"] for r in its]
+    fig, ax = plt.subplots(figsize=(max(10.0, 0.32 * len(x)), 5.0))
     rng = random.Random(0)
     jit = lambda i, n, off: [i + off + rng.uniform(-0.11, 0.11) for _ in range(n)]
     for i, r in zip(x, its):  # every game, when the iteration recorded them (older ones kept means only)
@@ -139,17 +139,18 @@ def rl_curve(its: list[dict]) -> None:
     ax.step(x, line, where="post", c="#d04a4a", lw=1.5, label="champion (mean of its head-to-heads)")
     base = st.mean(scores.get("raw_init.pt", [0]))
     ax.axhline(base, c="#888", lw=0.8, ls="--")
-    ax.text(x[0], base - 0.45, f"raw_init (kickoff imitation) {base:.2f}", fontsize=8, color="#666")
+    ax.text(x[-1] + 0.6, base, f"raw_init {base:.2f}", fontsize=8, color="#666", va="center")
     ax.axhline(9.01, c="#d9a0a0", lw=0.8, ls="--")
-    ax.text(x[0], 9.1, "Stage 1 champion sim0053 9.01 (combo actions, fixed seeds)", fontsize=8, color="#b07070")
+    ax.text(x[-1] + 0.6, 9.01, "Stage 1\nsim0053 9.01", fontsize=8, color="#b07070", va="center")
     top = max([9.5] + [max(r.get("test_games") or [0]) + 0.8 for r in its] + [max(r.get("train_games") or [0]) + 0.8 for r in its])
-    for at, txt in _setting_changes(its):
+    for k, (at, txt) in enumerate(_setting_changes(its)):  # staggered so close changes stay readable
         ax.axvline(at, c="k", ls=":", lw=0.8)
-        ax.text(at - 0.15, 0.3, txt, fontsize=7, ha="right", rotation=90, va="bottom")
-    ax.set(xlabel="iteration", ylabel="rounds won per run", ylim=(0, top),
+        ax.text(at - 0.15, top * (0.97 - 0.2 * (k % 3)), txt, fontsize=7, ha="right", rotation=90, va="top",
+                bbox=dict(facecolor="white", edgecolor="none", alpha=0.7, pad=0.5))
+    ax.set(xlabel="iteration", ylabel="rounds won per run", ylim=(0, top), xlim=(x[0] - 0.8, x[-1] + 2.6),
            title="Stage 2: Laya clicks (raw actions), pure RL in the jackdaw simulator (Red Deck / White Stake)")
     ax.xaxis.set_major_locator(matplotlib.ticker.MaxNLocator(integer=True))
-    ax.legend(loc="upper right", fontsize=8)
+    ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.13), ncol=4, fontsize=8, frameon=False)
     fig.tight_layout()
     fig.savefig(OUT / "stage2_rl.png", dpi=130)
 
