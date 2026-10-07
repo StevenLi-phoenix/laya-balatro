@@ -26,6 +26,10 @@
   - A rejected move keeps the selection in the real game too (matches the simulator).
   - Take/cancel loop on The Hierophant (832 cancels in one pack): target clicks capped at the card's target count,
     2 target selections per pick, 60-click safety net in the real-game runner.
+- **Sim/real prompt mismatch: hand-level order.** Tied hand levels printed alphabetically in the real game (mod order)
+  and in hand order in the simulator; on seed U919ZL9K the differing line flipped a near-tie (play 0.47 vs discard
+  0.52) at decision 36 and the runs ended at 14 vs 8 rounds. Ties now sort by hand order on both sides; with that, the
+  simulator replays the real run exactly (329/329 decisions, 14 rounds).
 - RL iterations record every game (self-play, new weights, champion per seed); the Stage 2 chart plots all of them.
 
 ## v1.1 — Stage 2: raw clicks, pure RL (2026-10-07)

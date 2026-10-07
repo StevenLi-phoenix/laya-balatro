@@ -618,8 +618,12 @@ def state_text(s: dict) -> str:
         lines.append("Vouchers: " + "; ".join(_describe(v) for v in s["vouchers"]))
     lv = {k: v for k, v in levels.items() if v[0] > 1}
     if lv:
-        lines.append("Hand levels: " + ", ".join(f"{k} L{v[0]} ({v[1]}x{v[2]})"
-                                                  for k, v in sorted(lv.items(), key=lambda x: -x[1][0])))
+        # Ties in a fixed hand order: the mod sends levels alphabetically, the simulator in HAND_BASE order,
+        # and the differing line flipped a near-tie choice (seed U919ZL9K: real 14 rounds vs sim 8).
+        order = list(HAND_BASE)
+        lines.append("Hand levels: " + ", ".join(
+            f"{k} L{v[0]} ({v[1]}x{v[2]})" for k, v in sorted(
+                lv.items(), key=lambda x: (-x[1][0], order.index(x[0]) if x[0] in order else len(order)))))
     if s.get("hand"):
         lines.append("Hand: " + " ".join(card_str(x) for x in s["hand"]))
         if s.get("pending_pick") is not None and ph == "pack":
