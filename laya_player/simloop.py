@@ -233,7 +233,7 @@ def _search_labels(traj: list[list[dict]], jobs: dict, w: float, step: float, st
             res[key] = fut.result()
         except Exception:  # noqa: BLE001 -- a failed search only costs its labels
             errors += 1
-    out = []
+    out, mass, top = [], [], []
     for tr in traj:
         for d in tr:
             if "search" not in d:
@@ -252,6 +252,8 @@ def _search_labels(traj: list[list[dict]], jobs: dict, w: float, step: float, st
             if not labels:
                 continue
             d["labels"] = labels
+            mass.append(sum(math.exp(dist[j]) for j in labels))  # how far the playing policy already agrees
+            top.append(max(range(len(dist)), key=dist.__getitem__) in labels)
             ign = [j for j, kk in enumerate(keys) if kk[0] == "use"]
             out.append({"phase": d["phase"], "state": d["state"], "options": d["options"], "label": labels[0],
                         "labels": labels, "target": _target(dist, labels, ign, step), "w": w})
@@ -259,7 +261,9 @@ def _search_labels(traj: list[list[dict]], jobs: dict, w: float, step: float, st
         kinds = [r["kind"] for r in res.values() if r]
         stats.update(search_turns=len(res), search_clear=kinds.count("clear"),
                      search_hidden=sum(1 for r in res.values() if not r), search_errors=errors,
-                     search_examples=len(out), search_wait_s=round(time.time() - t0))
+                     search_examples=len(out), search_wait_s=round(time.time() - t0),
+                     search_agree=round(statistics.mean(mass), 3) if mass else None,
+                     search_top=round(statistics.mean(top), 3) if top else None)
     return out
 
 
@@ -360,7 +364,8 @@ def main():
             f"{' NEW' if improved else ' rollback' if rec.get('rollback') else ''} | {len(dec)} dec, "
             f"play {rec['play_s']}s train {rec['train_s']}s test {rec['test_s']}s"
             + (f" | search {sst['search_turns']} turns ({sst['search_clear']} clear, {sst['search_errors']} err) "
-               f"-> {sst['search_examples']} clicks, wait {sst['search_wait_s']}s" if sst else ""))
+               f"-> {sst['search_examples']} clicks, agree {sst['search_agree']} top {sst['search_top']}, "
+               f"wait {sst['search_wait_s']}s" if sst else ""))
 
 
 if __name__ == "__main__":
