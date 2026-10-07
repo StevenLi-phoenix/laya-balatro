@@ -40,6 +40,14 @@
   ~5.3 rounds while their sampled games fell 4.1 → 1.2 (iterations 11–19), poisoning the training data. The champion
   itself samples fine (raw0010: greedy 6.54, T 0.1 6.62, T 0.3 5.08, T 0.6 2.00). Training weights were reset to the
   champion and now learn only from each seed's best sibling game (positive examples sharpen instead of flatten).
+- **Simulator scored played cards in click order.** The real game scores the selection left to right as it sits in the
+  hand; jackdaw got the click order, so Hanging Chad, Photograph, Mult-vs-xMult order and per-card luck (Lucky, Glass,
+  Bloodstone) were wrong in every raw-click simulation (seed X8AXHXRD: real 13 rounds vs sim 7). Play/discard indices
+  are now sorted.
+- Simulator blind previews use each boss's own multiple (The Wall x4, The Needle x1, Violet Vessel x6), not a flat x2.
+- **Descriptions no longer truncated** (both sides): the localization parser stopped at the first `{},` inside a line,
+  cutting 16 texts short (Fibonacci, Aura and Hone were bare names; Mail-In Rebate, Campfire, Hack, To Do List, Seance,
+  Sixth Sense, Ankh, Hex, Wraith, Wheel of Fortune, Glow Up, Illusion, Showman lost their second half).
 - RL iterations record every game (self-play, new weights, champion per seed); the Stage 2 chart plots all of them.
 
 ## v1.1 — Stage 2: raw clicks, pure RL (2026-10-07)

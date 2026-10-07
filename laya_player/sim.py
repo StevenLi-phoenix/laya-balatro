@@ -23,6 +23,13 @@ HANDS = list(game.HAND_BASE)
 BLIND_MULT = {"Small": 1.0, "Big": 1.5, "Boss": 2.0}
 
 
+def _blind_mult(slot: str, key: str) -> float:
+    """Score multiple of a blind: bosses differ (The Wall x4, The Needle x1, Violet Vessel x6)."""
+    from jackdaw.engine.blind import BLINDS
+    b = BLINDS.get(key)
+    return b.mult if b is not None else BLIND_MULT[slot]
+
+
 def _val(x):
     return getattr(x, "value", x)
 
@@ -162,7 +169,7 @@ def canonical(gs: dict) -> dict | None:
         cur = gs.get("blind_on_deck") or "Small"
         base = game.ANTE_BASE[min(ante, len(game.ANTE_BASE) - 1)]
         tags = rr.get("blind_tags") or {}
-        s["blinds"] = [{"slot": sl, "name": rr["blind_choices"][sl], "target": int(base * BLIND_MULT[sl]),
+        s["blinds"] = [{"slot": sl, "name": rr["blind_choices"][sl], "target": int(base * _blind_mult(sl, rr["blind_choices"][sl])),
                         "tag": tags.get(sl)} for sl in order[order.index(cur):]]
         s["can_skip"] = any(isinstance(a, SkipBlind) for a in get_legal_actions(gs))
     if phase == "shop":
@@ -186,9 +193,11 @@ def to_engine(s: dict, a: dict):
     if t == "skip_blind":
         return SkipBlind()
     if t == "play":
-        return PlayHand(remap(a["cards"]))
+        # the real game scores the selection left to right as it sits in the hand, not in click order
+        # (Hanging Chad / Photograph / Mult-vs-xMult order; seed X8AXHXRD: real 13 rounds vs sim 7)
+        return PlayHand(remap(sorted(a["cards"])))
     if t == "discard":
-        return Discard(remap(a["cards"]))
+        return Discard(remap(sorted(a["cards"])))
     if t == "use":
         return UseConsumable(a["slot"], tg)
     if t == "buy":

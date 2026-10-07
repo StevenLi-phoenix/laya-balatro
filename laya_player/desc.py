@@ -90,7 +90,9 @@ def _split_top(s: str) -> list[str]:
 def _loc() -> dict[str, tuple[str, list[str]]]:
     src = (DATA / "en-us.lua").read_text(encoding="utf8")
     out = {}
-    for m in re.finditer(r"\b(\w+)=\{\s*name=\"([^\"]*)\",\s*text=\{(.*?)\},", src, re.S):
+    # text={ "line", "line", ... }: match the quoted lines themselves. A lazy `.*?},` stopped at the first
+    # "{}," inside a line and cut 16 descriptions short (Fibonacci, Aura and Hone came out as bare names).
+    for m in re.finditer(r'\b(\w+)=\{\s*name="([^"]*)",\s*text=\{((?:\s*"(?:[^"\\]|\\.)*",?)*)\s*\}', src, re.S):
         key = m.group(1)
         if key not in out:
             out[key] = (m.group(2), re.findall(r"\"((?:[^\"\\]|\\.)*)\"", m.group(3)))
