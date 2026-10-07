@@ -5,6 +5,8 @@ and in the real game are identical and a simulator-trained policy transfers with
 """
 from __future__ import annotations
 
+import hashlib
+
 from jackdaw.engine import game as engine
 from jackdaw.engine.actions import (CashOut, Discard, NextRound, OpenBooster, PickPackCard, PlayHand,
                                     RedeemVoucher, Reroll, SelectBlind, SellCard, SkipBlind, SkipPack,
@@ -154,7 +156,11 @@ def canonical(gs: dict) -> dict | None:
         # hidden card's place cannot give its rank away; jackdaw's rank-sorted order leaked it ("??" between
         # a 9 and a 6 is a 7 or 8) and diverged from the real game (seed C6HRB2UR: real 12 vs sim 11).
         order = sorted((i for i in order if i not in hidden), key=lambda i: hand[i].sort_id)
-        order += sorted(hidden, key=lambda i: hash(id(hand[i])))
+        # hidden cards in an order that hides rank but is repeatable (hash(id()) changed from process to
+        # process); the real game's order among face-down cards is random per session, so clicks on them
+        # cannot be matched card-for-card -- twin runs may differ on The House / Wheel / Fish / Mark
+        order += sorted(hidden, key=lambda i: hashlib.sha256(
+            f"{gs.get('_laya_seed', '')}:{hand[i].sort_id}".encode()).hexdigest())  # per-run salt
     s["hand"] = [_card(hand[i]) for i in order] if phase in ("hand", "pack") else []
     s["_hidx"] = order
     s["jokers"] = [{"key": j.center_key, "sell": j.sell_cost, "ed": _edition(j), "eternal": bool(j.eternal),
@@ -362,6 +368,7 @@ class SimGame:
                 jri.init_game_object = orig_init
         else:
             self.gs = initialize_run(deck, stake, seed)
+        self.gs["_laya_seed"] = seed  # salts the face-down order (canonical) per run
         self.rounds_won = 0
         self.max_ante = 1
         self.illegal = 0
