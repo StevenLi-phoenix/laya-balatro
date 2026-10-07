@@ -148,6 +148,13 @@ def canonical(gs: dict) -> dict | None:
     # pack tarot to the wrong cards.
     hand = gs.get("hand", [])
     order = list(range(len(hand)))
+    hidden = [i for i, c in enumerate(hand) if getattr(c, "facing", "front") == "back"]
+    if hidden:
+        # The mod lists a hand with face-down cards by card id (creation order), hidden cards last, so a
+        # hidden card's place cannot give its rank away; jackdaw's rank-sorted order leaked it ("??" between
+        # a 9 and a 6 is a 7 or 8) and diverged from the real game (seed C6HRB2UR: real 12 vs sim 11).
+        order = sorted((i for i in order if i not in hidden), key=lambda i: hand[i].sort_id)
+        order += sorted(hidden, key=lambda i: hash(id(hand[i])))
     s["hand"] = [_card(hand[i]) for i in order] if phase in ("hand", "pack") else []
     s["_hidx"] = order
     s["jokers"] = [{"key": j.center_key, "sell": j.sell_cost, "ed": _edition(j), "eternal": bool(j.eternal),
@@ -195,9 +202,9 @@ def to_engine(s: dict, a: dict):
     if t == "play":
         # the real game scores the selection left to right as it sits in the hand, not in click order
         # (Hanging Chad / Photograph / Mult-vs-xMult order; seed X8AXHXRD: real 13 rounds vs sim 7)
-        return PlayHand(remap(sorted(a["cards"])))
+        return PlayHand(tuple(sorted(remap(a["cards"]))))
     if t == "discard":
-        return Discard(remap(sorted(a["cards"])))
+        return Discard(tuple(sorted(remap(a["cards"]))))
     if t == "use":
         return UseConsumable(a["slot"], tg)
     if t == "buy":

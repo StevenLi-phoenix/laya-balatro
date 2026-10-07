@@ -48,6 +48,12 @@
 - **Descriptions no longer truncated** (both sides): the localization parser stopped at the first `{},` inside a line,
   cutting 16 texts short (Fibonacci, Aura and Hone were bare names; Mail-In Rebate, Campfire, Hack, To Do List, Seance,
   Sixth Sense, Ankh, Hex, Wraith, Wheel of Fortune, Glow Up, Illusion, Showman lost their second half).
+- **Simulator leaked face-down cards' ranks.** With a face-down card in hand, the mod lists the hand by card id with
+  hidden cards last, so a hidden card's place reveals nothing; the simulator kept the rank-sorted order, where `??`
+  between a 9 and a 6 must be a 7 or 8. Training learned from that leak and the runs diverged (seed C6HRB2UR: real 12
+  vs sim 11; with the fix 12 = 12). The mod now compares ids numerically (text order broke at 999 → 1000).
+- **First real-game win**: raw0032 on seed MST5TRB3 beat Ante 8 (Cerulean Bell, playable since the audit fixes) and
+  reached round 26 in endless; simulator twin identical.
 - RL iterations record every game (self-play, new weights, champion per seed); the Stage 2 chart plots all of them.
 
 ## v1.1 — Stage 2: raw clicks, pure RL (2026-10-07)
