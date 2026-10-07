@@ -1,0 +1,202 @@
+[
+ {
+  "seed": "BOSS0000",
+  "real": "bl_head",
+  "sim": "bl_pillar"
+ },
+ {
+  "seed": "BOSS0001",
+  "real": "bl_head",
+  "sim": "bl_pillar"
+ },
+ {
+  "seed": "BOSS0002",
+  "real": "bl_window",
+  "sim": "bl_hook"
+ },
+ {
+  "seed": "BOSS0003",
+  "real": "bl_psychic",
+  "sim": "bl_club"
+ },
+ {
+  "seed": "BOSS0004",
+  "real": "bl_hook",
+  "sim": "bl_manacle"
+ },
+ {
+  "seed": "BOSS0005",
+  "real": "bl_head",
+  "sim": "bl_pillar"
+ },
+ {
+  "seed": "BOSS0006",
+  "real": "bl_club",
+  "sim": "bl_goad"
+ },
+ {
+  "seed": "BOSS0007",
+  "real": "bl_window",
+  "sim": "bl_hook"
+ },
+ {
+  "seed": "BOSS0008",
+  "real": "bl_goad",
+  "sim": "bl_psychic"
+ },
+ {
+  "seed": "BOSS0009",
+  "real": "bl_goad",
+  "sim": "bl_psychic"
+ },
+ {
+  "seed": "BOSS0010",
+  "real": "bl_club",
+  "sim": "bl_goad"
+ },
+ {
+  "seed": "BOSS0011",
+  "real": "bl_pillar",
+  "sim": "bl_head"
+ },
+ {
+  "seed": "BOSS0012",
+  "real": "bl_club",
+  "sim": "bl_goad"
+ },
+ {
+  "seed": "BOSS0013",
+  "real": "bl_head",
+  "sim": "bl_pillar"
+ },
+ {
+  "seed": "BOSS0014",
+  "real": "bl_psychic",
+  "sim": "bl_club"
+ },
+ {
+  "seed": "BOSS0015",
+  "real": "bl_psychic",
+  "sim": "bl_club"
+ },
+ {
+  "seed": "BOSS0016",
+  "real": "bl_club",
+  "sim": "bl_goad"
+ },
+ {
+  "seed": "BOSS0017",
+  "real": "bl_manacle",
+  "sim": "bl_window"
+ },
+ {
+  "seed": "BOSS0018",
+  "real": "bl_window",
+  "sim": "bl_hook"
+ },
+ {
+  "seed": "BOSS0019",
+  "real": "bl_pillar",
+  "sim": "bl_head"
+ },
+ {
+  "seed": "BOSS0020",
+  "real": "bl_pillar",
+  "sim": "bl_head"
+ },
+ {
+  "seed": "BOSS0021",
+  "real": "bl_hook",
+  "sim": "bl_manacle"
+ },
+ {
+  "seed": "BOSS0022",
+  "real": "bl_goad",
+  "sim": "bl_psychic"
+ },
+ {
+  "seed": "BOSS0023",
+  "real": "bl_club",
+  "sim": "bl_goad"
+ },
+ {
+  "seed": "BOSS0024",
+  "real": "bl_window",
+  "sim": "bl_hook"
+ },
+ {
+  "seed": "BOSS0025",
+  "real": "bl_head",
+  "sim": "bl_pillar"
+ },
+ {
+  "seed": "BOSS0026",
+  "real": "bl_window",
+  "sim": "bl_hook"
+ },
+ {
+  "seed": "BOSS0027",
+  "real": "bl_club",
+  "sim": "bl_goad"
+ },
+ {
+  "seed": "BOSS0028",
+  "real": "bl_club",
+  "sim": "bl_goad"
+ },
+ {
+  "seed": "BOSS0029",
+  "real": "bl_goad",
+  "sim": "bl_psychic"
+ },
+ {
+  "seed": "BOSS0030",
+  "real": "bl_psychic",
+  "sim": "bl_club"
+ },
+ {
+  "seed": "BOSS0031",
+  "real": "bl_psychic",
+  "sim": "bl_club"
+ },
+ {
+  "seed": "BOSS0032",
+  "real": "bl_manacle",
+  "sim": "bl_window"
+ },
+ {
+  "seed": "BOSS0033",
+  "real": "bl_goad",
+  "sim": "bl_psychic"
+ },
+ {
+  "seed": "BOSS0034",
+  "real": "bl_psychic",
+  "sim": "bl_club"
+ },
+ {
+  "seed": "BOSS0035",
+  "real": "bl_window",
+  "sim": "bl_hook"
+ },
+ {
+  "seed": "BOSS0036",
+  "real": "bl_manacle",
+  "sim": "bl_window"
+ },
+ {
+  "seed": "BOSS0037",
+  "real": "bl_club",
+  "sim": "bl_goad"
+ },
+ {
+  "seed": "BOSS0038",
+  "real": "bl_pillar",
+  "sim": "bl_head"
+ },
+ {
+  "seed": "BOSS0039",
+  "real": "bl_psychic",
+  "sim": "bl_club"
+ }
+]

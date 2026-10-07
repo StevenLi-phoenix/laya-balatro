@@ -1,0 +1,20 @@
+.venv/
+__pycache__/
+*.pid
+# large / local-only: checkpoints go to Hugging Face; data/ holds files extracted from your own Balatro copy
+data/
+ckpt/
+ckpt_sim/
+ckpt_sim_v1_namesonly/
+runs_sim_v1_namesonly/
+save_backup/
+state_sample.json
+logs_*.txt
+# per-decision traces and process output
+runs/decisions/
+runs/*_stdout.txt
+runs/*_stderr.txt
+runs_sim/*.txt
+runs_sim/state.json
+runs/video/*.raw.mp4
+runs/video/*.txt

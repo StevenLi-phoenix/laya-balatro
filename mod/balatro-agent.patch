@@ -1,0 +1,154 @@
+diff --git a/mod/src/actions.lua b/mod/src/actions.lua
+index 513baea..7c8279c 100644
+--- a/mod/src/actions.lua
++++ b/mod/src/actions.lua
+@@ -815,9 +815,29 @@ handlers.reroll_shop = function(args)
+   return anim_settle({ rerolled = true }, 8)
+ end
+ 
++-- The shop's slide-in event chain keeps dereferencing G.shop until the box
++-- reaches its slot (vanilla checks |T.y - VT.y| < 3, then fires 0.2 s later).
++-- The event queue never fully drains in the shop, so gate on that position
++-- having held for a moment instead.
++local shop_ready_since
++local function shop_settled()
++  if not (G.shop and G.shop.T and G.STATE == G.STATES.SHOP and G.STATE_COMPLETE)
++      or math.abs(G.shop.T.y - G.shop.VT.y) >= 3 then
++    shop_ready_since = nil
++    return false
++  end
++  local now = love.timer.getTime()
++  shop_ready_since = shop_ready_since or now
++  return now - shop_ready_since >= 0.6
++end
++
+ handlers.leave_shop = function(args)
+   local phase_err = check_phase({ "SHOP" })
+   if phase_err then return phase_err end
++  -- Leaving before the slide-in events finish crashes vanilla (game.lua: G.shop nil).
++  if not shop_settled() then
++    return err("CANNOT_USE_NOW", "Shop is still opening; retry shortly")
++  end
+ 
+   G.FUNCS.toggle_shop()
+ 
+@@ -835,7 +855,9 @@ local function cash_out_settle(pressed)
+         if not G or not G.STATES then
+           return err("WRONG_PHASE", "Game state is not available")
+         end
+-        if G.STATE == G.STATES.SHOP and G.STATE_COMPLETE then
++        -- Resolve only once the shop is interactive so an immediate leave_shop
++        -- cannot remove G.shop under its slide-in events.
++        if shop_settled() then
+           return settle_result({ cashed_out = true }, false)
+         end
+         if not pressed and G.STATE == G.STATES.ROUND_EVAL then
+@@ -901,6 +923,60 @@ handlers.restart = function(args)
+   return phase_settle({ "BLIND_SELECT" }, { restarted = true }, 15)
+ end
+ 
++-- Starting a run straight from GAME_OVER can leave the dead run's shop events
++-- queued (crash: game.lua 'shop' nil on the next shop); going through the
++-- main menu runs delete_run first.
++handlers.go_to_menu = function(args)
++  if not G or not G.FUNCS or type(G.FUNCS.go_to_menu) ~= 'function' then
++    return err("CANNOT_USE_NOW", "Main menu is not reachable now")
++  end
++  if G.STAGE == G.STAGES.MAIN_MENU then
++    return ok({ already_in_menu = true })
++  end
++  G.FUNCS.go_to_menu()
++  return phase_settle({ "MENU" }, { menu = true }, 15)
++end
++
++-- After beating the win ante the win overlay blocks cash-out; its "Endless Mode"
++-- button is vanilla exit_overlay_menu, which keeps the run going.
++handlers.endless_mode = function(args)
++  if not G or not G.GAME or not G.GAME.won then
++    return err("WRONG_PHASE", "The run has not been won")
++  end
++  if not G.OVERLAY_MENU then
++    return ok({ already_endless = true })
++  end
++  G.FUNCS.exit_overlay_menu()
++  return anim_settle({ endless = true }, 8)
++end
++
++-- Read-only: blind keys with their SMODS sort_id and boss config, so external
++-- simulators can reproduce pseudorandom_element's ordering (it sorts by sort_id).
++handlers.blind_order = function(args)
++  local out = {}
++  for k, v in pairs(G.P_BLINDS or {}) do
++    out[#out + 1] = { key = k, sort_id = v.sort_id, order = v.order,
++                      boss_min = v.boss and v.boss.min, showdown = v.boss and v.boss.showdown or nil }
++  end
++  return ok({ blinds = out })
++end
++
++-- Read-only RNG probe for simulator validation: LuaJIT math.random(n) after
++-- math.randomseed(seed), plus the live run's pseudoseed values for given keys.
++handlers.debug_rng = function(args)
++  local out = {}
++  if args.seed then
++    math.randomseed(args.seed)
++    out.draws = { math.random(args.n or 8), math.random(args.n or 8), math.random() }
++  end
++  if args.peek and G.GAME and G.GAME.pseudorandom then
++    out.state = {}
++    for _, k in ipairs(args.peek) do out.state[k] = G.GAME.pseudorandom[k] end
++    out.hashed_seed = G.GAME.pseudorandom.hashed_seed
++  end
++  return ok(out)
++end
++
+ handlers.continue_game = function(args)
+   if not G or not G.STAGE or not G.STAGES or G.STAGE ~= G.STAGES.MAIN_MENU
+       or not G.STATE or not G.STATES or G.STATE ~= G.STATES.MENU then
+diff --git a/mod/src/state.lua b/mod/src/state.lua
+index 2d200b1..6dcd9bd 100644
+--- a/mod/src/state.lua
++++ b/mod/src/state.lua
+@@ -86,12 +86,17 @@ local function get_card_edition(card)
+ end
+ 
+ local function get_card_enhancement(card)
+-  if not card or not card.ability or not card.ability.name then return nil end
++  if not card then return nil end
++  -- Center keys are stable (m_bonus -> bonus); display names are not ('Bonus', not
++  -- 'Bonus Card'), so the name table below is only a fallback.
++  local key = card.config and card.config.center and card.config.center.key
++  if type(key) == 'string' and key:sub(1, 2) == 'm_' then return key:sub(3) end
++  if not card.ability or not card.ability.name then return nil end
+   local name = card.ability.name
+   if name == '' or name == 'Default Base' then return nil end
+   local enhancements = {
+-    ['Bonus Card'] = 'bonus',
+-    ['Mult Card'] = 'mult',
++    ['Bonus'] = 'bonus',
++    ['Mult'] = 'mult',
+     ['Wild Card'] = 'wild',
+     ['Glass Card'] = 'glass',
+     ['Steel Card'] = 'steel',
+@@ -339,6 +344,8 @@ local function serialize_joker(card, faced_down)
+     entity_id = card.config and card.config.center and card.config.center.key,
+     rarity = card.config and card.config.center and card.config.center.rarity,
+     live_description = get_card_description(card),
++    -- raw ability table: lets clients render effect text in their own language
++    ability = compact_table(card.ability, 3),
+     sell_value = card.sell_cost,
+     edition = get_card_edition(card),
+     stickers = get_card_stickers(card),
+@@ -1065,6 +1072,13 @@ local function snapshot()
+   if G.GAME and G.GAME.round_resets and G.GAME.round_resets.ante and G.GAME.round_resets.ante > 8 then
+     payload.endless_mode = true
+   end
++  if G.GAME and G.GAME.pseudorandom and G.GAME.pseudorandom.seed then
++    payload.seed = G.GAME.pseudorandom.seed
++  end
++  if G.GAME and G.GAME.won then
++    payload.won = true
++    payload.overlay_open = G.OVERLAY_MENU ~= nil
++  end
+ 
+   return payload
+ end
