@@ -105,8 +105,11 @@ def _setting_changes(its: list[dict]) -> list[tuple[float, str]]:
         nxt = [i for i, t in sorted(times.items()) if t > m[1]]
         if nxt and diff:
             short = {"batch": "batch", "lr": "lr", "games": "games", "test-games": "test", "temperature": "T",
-                     "epochs": "PPO clip, epochs", "group": "same-seed credit, group"}
-            out.append((nxt[0] - 0.5, ", ".join(f"{short.get(k, k)} {v}" for k, v in diff.items())))
+                     "epochs": "PPO clip, epochs", "group": "same-seed credit, group", "search": "search labels",
+                     "search-workers": None, "search-step": "search step"}
+            lab = ", ".join(f"{short.get(k, k)} {v}" for k, v in diff.items() if short.get(k, k))
+            if lab:
+                out.append((nxt[0] - 0.5, lab))
     return out
 
 
@@ -188,7 +191,11 @@ def stage2(rt: list[dict]) -> list[str]:
           "clicks per decision, no pre-built combinations, hand labels or score estimates. The HF teacher is used "
           "once (kickoff imitation from sim0053); afterwards training is pure RL in the simulator on random seeds. "
           "Each iteration the new weights and the champion play the same fresh random seeds; a paired t >= 1 win "
-          "takes the title. Real Balatro validates the champion on random seeds.\n"]
+          "takes the title. Real Balatro validates the champion on random seeds.\n",
+          "From iteration 48 (v1.2) a quarter of self-play hand turns are also searched in the simulator "
+          "(`search.py`): every play scored exactly, candidate plays and discards rolled out on reshuffled decks, "
+          "no draw order or RNG seen. The clicks toward the best moves become a soft target: the playing policy "
+          "moved a step (0.3; 0.5 from iteration 59) toward them. Laya's interface is unchanged.\n"]
     if ev.exists():
         e = json.loads(ev.read_text())
         md.append(f"Kickoff (teacher clicks, held-out games): agreement {e['before']['all']:.1%} before -> "
@@ -201,6 +208,21 @@ def stage2(rt: list[dict]) -> list[str]:
                "| iter | train | new weights | champion | paired t | champion after |", "|---|---|---|---|---|---|"]
         md += [f"| {r['iter']} | {r['train_rounds']:.2f} | {r['test_rounds']:.2f} | {r['champion_rounds']:.2f} | "
                f"{r['t']:+.1f} | {r['champion']} |" for r in its[-15:]]
+    lad = ROOT / "runs" / "ladder.json"
+    if lad.exists():
+        L = json.loads(lad.read_text())
+        res, n = L["results"], len(L["seeds"])
+        md += [f"\nSame {n} fresh seeds, greedy, every checkpoint (deal luck cancels):\n",
+               "| checkpoint | mean rounds | median | >= 9 rounds | wins |", "|---|---|---|---|---|"]
+        for name, r in res.items():
+            md.append(f"| {name} | {st.mean(r['rounds']):.2f} | {st.median(r['rounds'])} | "
+                      f"{sum(x >= 9 for x in r['rounds'])}/{n} | {sum(r['won'])} |")
+        names = list(res)
+        if len(names) >= 2:
+            a, b = res[names[-1]]["rounds"], res[names[-2]]["rounds"]
+            d = [x - y for x, y in zip(a, b)]
+            t = st.mean(d) / ((st.pstdev(d) or 1) / len(d) ** 0.5)
+            md.append(f"\n{names[-1]} vs {names[-2]}: {st.mean(d):+.2f} rounds per seed (paired t {t:+.1f}).\n")
     cks = list(dict.fromkeys(r["ckpt"] for r in rt if r["ckpt"].startswith("raw")))
     if cks:
         md += ["\nReal Balatro validation:\n", "| checkpoint | runs | mean rounds | best | mean ante | wins | sim twin identical |",

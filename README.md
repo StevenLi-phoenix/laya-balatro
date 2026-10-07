@@ -17,20 +17,25 @@ simulator and in the real game.
   (~270 decisions/s), aligned with the real game until seed-for-seed replays match.
 - **Training**: a one-time imitation kickoff on a heuristic teacher ([makemake/5k-balatro-games](https://huggingface.co/datasets/makemake/5k-balatro-games)),
   then pure RL (outcome-weighted self-play) in the simulator on random seeds; each iteration the new weights play
-  the champion on the same fresh random seeds. Real Balatro validates the champion.
+  the champion on the same fresh random seeds. Real Balatro validates the champion. From v1.2 a share of hand
+  decisions is also labelled by a simulator search (expert iteration, within a trust region).
 
 Weights and a gameplay video: [Steven10429/laya-balatro](https://huggingface.co/Steven10429/laya-balatro). Changes: [`CHANGELOG.md`](CHANGELOG.md). Write-up with charts: [`reports/REPORT.md`](reports/REPORT.md).
 
 ## Results (Red Deck, White Stake)
 
-### Stage 2 (v1.1): raw clicks, pure RL
+### Stage 2 (v1.1–v1.2, ended 2026-10-07): raw clicks, pure RL, then search labels
 
-| model | simulator head-to-head (fresh random seeds) | real Balatro (random seeds) |
+| model | simulator (same 128 fresh seeds, greedy) | real Balatro (random seeds) |
 |---|---|---|
-| `raw_init` (one-time teacher kickoff, clicks) | 2.25 | 0.3 rounds (4 runs) |
-| `raw0002` (RL iteration 2) | 5.88 vs 2.34, t +5.3 | 5.3 rounds (12 runs, best 12) |
-| `raw0007` (PPO clip) | 6.09 vs 5.16, t +2.8 | 9.0 rounds (3 runs, best 11) |
-| **`raw0008`** (PPO + same-seed credit), v1.1 champion | **6.02 vs 5.20, t +2.5** | validation running |
+| `raw_init` (one-time teacher kickoff, clicks) | 1.64 | 0.25 rounds (4 runs) |
+| `raw0008` (PPO + same-seed credit), v1.1 champion | – | 4.1 rounds (7 runs, best 16) |
+| `raw0032` | – | **first win**: seed MST5TRB3, beat Ante 8, round 26 in endless |
+| `raw0046`, last champion before search labels | 5.70 (median 3.5) | 5.7 rounds (20 runs, best 19) |
+| **`raw0056`**, final Stage 2 champion (search labels) | **5.63 (median 4)**, vs raw0046 −0.07, t −0.2 | 4.9 rounds (60 runs, best 17) |
+
+All 285 real Stage 2 runs average 5.7 rounds; the simulator twin of the same seed reached the same round in 272 of 285.
+Stage 2 did not overtake Stage 1's 7.9 real rounds.
 
 ![stage 2](reports/stage2_rl.png)
 
@@ -43,6 +48,13 @@ Weights and a gameplay video: [Steven10429/laya-balatro](https://huggingface.co/
    deal produced 0, 10 and 2 rounds from sampled play, so seed-level baselines are mostly luck.
 4. **Real-game speed**: a mod wait ran into its 8 s timeout on every shop/pack action (a background event never
    drains); ignoring non-blocking background events cut a 10-round run from ~14 to ~4 minutes.
+5. **Simulator fidelity** (v1.2): five sim/real mismatches found by twin replays and fixed (hand-level print order,
+   per-frame joker values, scoring order, face-down card order, Satellite payouts).
+6. **Search labels** (v1.2): with a fixed shop rule (24 seeds), search hand play reaches 10.46 rounds and greedy hand
+   play 8.75, while Laya's champion averages ~6.2 with its own shop play. Copying its clicks outright broke the policy; within a trust
+   region it gave two promotions, but the same-seed ladder shows no gain. Laya's click distribution is nearly 0/1, and
+   training did not move the third of searched clicks it disagreed with (fit 0.683 → 0.683). Softening that
+   distribution is the open problem.
 
 ### Stage 1 (v1.0): pre-built candidate moves
 
@@ -89,6 +101,8 @@ laya_player/
   simloop.py   self-play training loop     realloop.py champion vs real game + sim twin replay
   evolve.py    real-game run driver        record.py   record a real run with decision subtitles
   report.py    charts + reports/REPORT.md  remote_sync.py  mirror a remote trainer's champion + logs
+  search.py    simulator search for hand decisions (labels for self-play)
+  ladder.py    same-seed comparison of checkpoints
 run_stage2_n8.sh         Stage 2 on a Linux GPU box: kickoff imitation, then pure RL (simloop)
 mod/balatro-agent.patch  changes to the mod (seed/won/ability in state, shop-settle guard, go_to_menu, endless_mode)
 runs/, runs_sim/         logs and per-run results behind the report

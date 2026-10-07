@@ -1,7 +1,11 @@
 # Changelog
 
-## v1.2 (unreleased)
+## v1.2 — Stage 2 ends: search labels for hand decisions (2026-10-07)
 
+- **Stage 2 result.** 65 RL iterations; final champion `raw0056`. Same 128 fresh seeds, greedy: raw_init 1.64,
+  raw0046 (last champion before search labels) 5.70, raw0056 5.63 (−0.07 per seed, paired t −0.2; `ladder.py`).
+  Real Balatro: 285 Stage 2 runs average 5.7 rounds, twin replay identical in 272. First win: raw0032 (seed
+  MST5TRB3, round 26). Stage 1's champion still holds the best real average (7.9 rounds over 81 runs).
 - **Search labels for hand decisions** (`simloop --search 0.25`, new `search.py`). RL judged a hand click only
   through the run's final round count, and stalled: the champion's median run still died in Ante 1–2. Now a quarter
   of self-play hand turns are searched on CPU workers while the GPU keeps playing. The search sees only what a player
@@ -12,6 +16,16 @@
   pack and blind decisions stay pure RL. Benchmark on 24 seeds with a fixed shop rule: greedy hand play
   8.75 rounds (median 9.5), search 10.46 (median 11). Laya's champion averages ~6.2 with its own shop play, so hand
   play is where it loses.
+- **Search labels within a trust region** (`--search-step`). Imitating the labels outright broke the click sequences
+  (iterations 48–49: 2.48 vs 5.64 and 2.37 vs 6.24, both rolled back). The champion's click distribution is nearly
+  0/1: some search-approved clicks sat at log p −40 to −60. Each searched click now trains toward a soft target,
+  the playing distribution moved a step (0.3; 0.5 from iteration 59) onto the search's clicks, in the spirit of
+  conservative policy iteration. Next two promotions: raw0050 (6.45 vs 5.95, t +1.3) and raw0056 (6.62 vs 5.92,
+  t +2.0).
+- **Diagnostics: agreement and fit.** Each iteration logs how much probability self-play puts on the search's clicks
+  (flat at 0.67–0.70 from iteration 55 on), plus the same number on the trained clicks before and after training. The
+  fit did not move (0.683 → 0.683, 0.639 → 0.641): about a third of the searched clicks sit near p = 0, and a bounded
+  step cannot move them. Softening the click distribution is the open problem for the next stage.
 - **Targeted pack tarots are usable.** In v1.1 a targeted card in an Arcana/Spectral pack was only offered after
   hand cards were selected, so Laya never saw it (19 such packs in real runs: 9 untargeted takes, 10 skips, 0 uses).
   Now it is always visible as a two-step choice: `take tarot Strength (then choose its target cards)`, then

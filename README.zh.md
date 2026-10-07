@@ -5,6 +5,12 @@
 **候选动作接口**：每个决策点把游戏状态压成一行文本，枚举合法动作（出牌组合、弃牌方案、买/卖/跳过…）作为
 `choice` 选项，Laya 选一个，执行，再观察。
 
+> **v1.2（Stage 2 结束，2026-10-07）**：默认接口已改为原始点牌（`select K♥` … `play selected`），老师只用于开局，
+> 之后在 jackdaw 模拟器里纯强化学习，从 v1.2 起部分出牌回合用模拟器搜索打标签。最终冠军 `raw0056`：同 128 个
+> 新 seed 平均 5.63 关，和搜索前的 `raw0046`（5.70）没有差别；真实游戏 Stage 2 全部对局平均 5.7 关，`raw0032`
+> 第一次通关（seed MST5TRB3，打到第 26 关）。下文描述的是 Stage 1 的组合候选接口（`LAYA_ACTIONS=combo`），
+> 最新结果见英文 [README](README.md) 和 [CHANGELOG](CHANGELOG.md)。
+
 ```
 Balatro + balatro-agent mod ──named pipe JSON-RPC──▶ bridge.py ─▶ live.py (状态→canonical, 动作→RPC)
                                                                      │

@@ -18,3 +18,70 @@
 04:02:08 iter 10: train 3.04 | test 5.25 vs champion 4.69 (t +1.7) NEW | 9326 dec, play 106s train 223s test 311s
 04:15:36 iter 11: train 4.06 | test 5.36 vs champion 5.39 (t -0.1) | 12769 dec, play 137s train 337s test 334s
 04:27:30 iter 12: train 3.40 | test 4.99 vs champion 5.23 (t -0.7) | 10887 dec, play 131s train 277s test 306s
+04:30:24 start: champion raw0010.pt, actions raw
+04:41:43 iter 13: train 2.34 | test 5.93 vs champion 6.16 (t -0.6) | 9129 dec, play 99s train 200s test 379s
+04:53:05 iter 14: train 1.81 | test 6.76 vs champion 6.52 (t +0.5) | 7673 dec, play 86s train 178s test 418s
+05:02:51 iter 15: train 1.94 | test 5.21 vs champion 5.36 (t -0.4) | 7357 dec, play 90s train 172s test 323s
+05:05:37 start: champion raw0010.pt, actions raw
+05:18:09 iter 16: train 2.93 | test 5.73 vs champion 5.63 (t +0.2) | 11218 dec, play 129s train 270s test 353s
+05:30:40 iter 17: train 3.03 | test 5.19 vs champion 5.71 (t -1.0) | 11530 dec, play 120s train 281s test 349s
+05:40:03 iter 18: train 1.41 | test 5.18 vs champion 5.59 (t -0.9) | 6566 dec, play 82s train 141s test 340s
+05:48:23 iter 19: train 1.20 | test 5.35 vs champion 5.43 (t -0.2) | 3857 dec, play 63s train 65s test 372s
+05:51:28 start: champion raw0010.pt, actions raw
+06:01:30 iter 20: train 3.93 | test 4.94 vs champion 5.18 (t -1.0) | 6177 dec, play 128s train 159s test 314s
+06:13:04 iter 21: train 4.68 | test 6.22 vs champion 5.76 (t +1.6) NEW | 6821 dec, play 158s train 177s test 359s
+06:24:34 iter 22: train 6.27 | test 5.50 vs champion 5.66 (t -0.6) | 6991 dec, play 179s train 185s test 325s
+06:36:58 iter 23: train 6.30 | test 6.68 vs champion 6.38 (t +0.7) | 6071 dec, play 191s train 171s test 381s
+06:47:45 iter 24: train 5.12 | test 6.11 vs champion 6.01 (t +0.3) | 5147 dec, play 146s train 143s test 357s
+06:53:51 start: champion raw0021.pt, actions raw
+07:04:34 iter 25: train 6.38 | test 5.63 vs champion 5.75 (t -0.3) | 4740 dec, play 187s train 125s test 330s
+07:14:18 iter 26: train 4.48 | test 6.69 vs champion 6.35 (t +0.9) | 3147 dec, play 126s train 80s test 378s
+07:24:17 iter 27: train 5.02 | test 6.41 vs champion 6.43 (t -0.1) | 3445 dec, play 157s train 88s test 354s
+07:26:21 start: champion raw0021.pt, actions raw
+07:41:39 iter 28: train 6.49 | test 6.14 vs champion 6.20 (t -0.1) | 7635 dec, play 365s train 207s test 346s
+07:54:32 iter 29: train 5.26 | test 5.84 vs champion 5.62 (t +0.4) | 4960 dec, play 308s train 134s test 331s
+08:07:57 iter 30: train 5.87 | test 5.95 vs champion 6.25 (t -0.7) | 5242 dec, play 308s train 139s test 358s
+08:08:55 start: champion raw0021.pt, actions raw
+08:21:41 iter 31: train 5.68 | test 5.09 vs champion 6.47 (t -3.3) rollback | 4496 dec, play 299s train 129s test 337s
+08:22:57 start: champion raw0021.pt, actions raw
+08:39:36 iter 32: train 5.11 | test 6.23 vs champion 5.73 (t +1.7) NEW | 12899 dec, play 307s train 345s test 347s
+08:56:40 iter 33: train 5.49 | test 5.90 vs champion 5.54 (t +1.4) NEW | 12233 dec, play 338s train 351s test 334s
+09:12:12 iter 34: train 6.20 | test 6.02 vs champion 5.73 (t +1.3) NEW | 8531 dec, play 345s train 225s test 362s
+09:27:00 iter 35: train 5.61 | test 6.50 vs champion 6.17 (t +1.2) NEW | 7972 dec, play 319s train 203s test 366s
+09:40:23 iter 36: train 6.07 | test 5.39 vs champion 5.73 (t -1.5) | 6055 dec, play 315s train 162s test 326s
+09:53:04 iter 37: train 5.52 | test 5.67 vs champion 5.42 (t +0.8) | 3959 dec, play 321s train 105s test 335s
+10:06:29 iter 38: train 5.86 | test 5.08 vs champion 6.16 (t -2.5) rollback | 6023 dec, play 317s train 158s test 328s
+10:13:49 start: champion raw0035.pt, actions raw
+10:27:07 start: champion raw0035.pt, actions raw
+10:40:38 iter 39: train 5.42 | test 6.41 vs champion 6.16 (t +0.8) | 5321 dec, play 318s train 143s test 349s
+10:54:59 iter 40: train 6.22 | test 6.12 vs champion 5.87 (t +0.8) | 6249 dec, play 345s train 167s test 349s
+11:08:17 iter 41: train 5.63 | test 6.78 vs champion 6.25 (t +1.7) NEW | 4528 dec, play 303s train 117s test 377s
+11:21:38 iter 42: train 5.58 | test 5.89 vs champion 5.92 (t -0.1) | 5663 dec, play 310s train 148s test 343s
+11:36:11 iter 43: train 6.29 | test 6.09 vs champion 6.08 (t +0.0) | 6568 dec, play 345s train 177s test 350s
+11:51:04 iter 44: train 6.38 | test 6.18 vs champion 5.74 (t +1.5) NEW | 5596 dec, play 367s train 167s test 359s
+12:04:45 iter 45: train 6.40 | test 6.76 vs champion 6.84 (t -0.6) | 3789 dec, play 336s train 103s test 381s
+12:18:07 iter 46: train 6.19 | test 6.73 vs champion 6.27 (t +1.4) NEW | 3566 dec, play 324s train 93s test 385s
+12:32:03 iter 47: train 6.61 | test 6.46 vs champion 6.31 (t +0.5) | 5240 dec, play 340s train 137s test 358s
+12:32:22 start: champion raw0046.pt, actions raw, search 0.25 of hand turns x22 workers
+12:47:49 iter 48: train 5.89 | test 2.48 vs champion 5.64 (t -6.1) rollback | 12816 dec, play 336s train 333s test 258s | search 1496 turns (556 clear, 0 err) -> 8111 clicks, wait 2s
+13:01:51 iter 49: train 4.76 | test 2.37 vs champion 6.24 (t -7.9) rollback | 10366 dec, play 287s train 264s test 291s | search 1371 turns (512 clear, 0 err) -> 7617 clicks, wait 2s
+13:02:12 start: champion raw0046.pt, actions raw, search 0.25 of hand turns x22 workers
+13:20:10 iter 50: train 6.66 | test 6.45 vs champion 5.95 (t +1.3) NEW | 13576 dec, play 373s train 374s test 331s | search 1700 turns (662 clear, 0 err) -> 9084 clicks, wait 1s
+13:40:31 iter 51: train 6.61 | test 5.44 vs champion 5.67 (t -0.7) | 20095 dec, play 373s train 538s test 310s | search 1704 turns (696 clear, 0 err) -> 9329 clicks, wait 0s
+14:00:40 iter 52: train 6.21 | test 5.69 vs champion 5.74 (t -0.2) | 19079 dec, play 372s train 516s test 321s | search 1556 turns (531 clear, 0 err) -> 8649 clicks, wait 2s
+14:17:12 iter 53: train 4.94 | test 5.58 vs champion 5.83 (t -0.8) | 15177 dec, play 281s train 386s test 325s | search 1275 turns (517 clear, 0 err) -> 7093 clicks, wait 1s
+14:36:33 iter 54: train 6.46 | test 6.21 vs champion 5.83 (t +0.9) | 18419 dec, play 351s train 476s test 333s | search 1496 turns (569 clear, 0 err) -> 8459 clicks, wait 1s
+14:36:53 start: champion raw0050.pt, actions raw, search 0.25 of hand turns x22 workers
+14:55:05 iter 55: train 6.34 | test 5.92 vs champion 5.59 (t +0.8) | 16819 dec, play 338s train 439s test 315s | search 1412 turns (579 clear, 0 err) -> 8132 clicks, agree 0.698 top 0.724, wait 2s
+15:12:54 iter 56: train 5.93 | test 6.62 vs champion 5.92 (t +2.0) NEW | 15473 dec, play 327s train 398s test 342s | search 1421 turns (554 clear, 0 err) -> 8107 clicks, agree 0.696 top 0.722, wait 3s
+15:29:36 iter 57: train 5.86 | test 5.16 vs champion 4.99 (t +0.7) | 15586 dec, play 321s train 402s test 280s | search 1436 turns (532 clear, 0 err) -> 8224 clicks, agree 0.692 top 0.714, wait 1s
+15:47:34 iter 58: train 6.57 | test 5.58 vs champion 5.60 (t -0.1) | 16116 dec, play 350s train 428s test 300s | search 1530 turns (636 clear, 0 err) -> 8678 clicks, agree 0.693 top 0.719, wait 2s
+15:47:56 start: champion raw0056.pt, actions raw, search 0.25 of hand turns x22 workers
+16:07:43 iter 59: train 7.09 | test 6.09 vs champion 6.20 (t -0.4) | 16763 dec, play 377s train 475s test 335s | search 1553 turns (643 clear, 0 err) -> 8725 clicks, agree 0.699 top 0.722, wait 1s
+16:25:57 iter 60: train 5.46 | test 6.52 vs champion 6.43 (t +0.3) | 16118 dec, play 324s train 411s test 358s | search 1458 turns (525 clear, 0 err) -> 8406 clicks, agree 0.672 top 0.706, wait 2s
+16:43:03 iter 61: train 6.06 | test 5.43 vs champion 5.23 (t +0.8) | 15649 dec, play 327s train 395s test 304s | search 1455 turns (538 clear, 0 err) -> 8384 clicks, agree 0.677 top 0.719, wait 2s
+16:43:23 start: champion raw0056.pt, actions raw, search 0.25 of hand turns x22 workers
+17:00:55 iter 62: train 5.79 | test 6.27 vs champion 6.02 (t +0.7) | 14311 dec, play 328s train 391s test 333s | search 1340 turns (506 clear, 0 err) -> 7761 clicks, agree 0.679 top 0.719, fit 0.683->0.683, wait 1s
+17:16:57 iter 63: train 5.07 | test 5.68 vs champion 5.57 (t +0.4) | 13645 dec, play 286s train 364s test 311s | search 1326 turns (503 clear, 0 err) -> 7625 clicks, agree 0.673 top 0.71, fit 0.639->0.641, wait 1s
+17:36:24 iter 64: train 7.01 | test 6.43 vs champion 6.19 (t +0.8) | 17194 dec, play 362s train 450s test 354s | search 1616 turns (650 clear, 0 err) -> 9210 clicks, agree 0.686 top 0.725, fit 0.698->0.703, wait 1s
+17:53:52 iter 65: train 5.48 | test 5.66 vs champion 5.63 (t +0.1) | 15985 dec, play 308s train 433s test 307s | search 1348 turns (519 clear, 0 err) -> 7731 clicks, agree 0.681 top 0.716, fit 0.666->0.672, wait 1s

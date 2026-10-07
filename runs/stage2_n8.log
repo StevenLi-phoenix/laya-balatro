@@ -10,3 +10,18 @@
 03:17:24 simloop (re)started: --batch 32 --lr 3e-6 --games 128 --test-games 128 --temperature 0.4 --epochs 2 --group 4 --credit seed
 03:42:13 simloop (re)started: --batch 32 --lr 3e-6 --games 128 --test-games 128 --temperature 0.4 --epochs 2 --group 4 --credit seed
 03:51:26 simloop (re)started: --batch 32 --lr 3e-6 --games 128 --test-games 128 --temperature 0.4 --epochs 2 --group 4 --credit seed
+04:30:22 simloop (re)started: --batch 32 --lr 3e-6 --games 128 --test-games 128 --temperature 0.4 --epochs 2 --group 4 --credit seed
+05:05:35 simloop (re)started: --batch 32 --lr 3e-6 --games 128 --test-games 128 --temperature 0.3 --epochs 2 --group 4 --credit seed
+05:51:25 simloop (re)started: --batch 32 --lr 3e-6 --games 128 --test-games 128 --temperature 0.3 --epochs 2 --group 4 --credit best
+06:53:49 simloop (re)started: --batch 32 --lr 3e-6 --games 128 --test-games 128 --temperature 0.3 --epochs 2 --group 4 --credit best
+07:26:19 simloop (re)started: --batch 32 --lr 3e-6 --games 256 --test-games 128 --temperature 0.3 --epochs 2 --group 4 --credit best
+08:08:52 simloop (re)started: --batch 32 --lr 6e-6 --games 256 --test-games 128 --temperature 0.3 --epochs 2 --group 4 --credit best
+08:22:54 simloop (re)started: --batch 32 --lr 3e-6 --games 256 --test-games 128 --temperature 0.3 --epochs 2 --group 4 --credit best
+10:13:47 simloop (re)started: --batch 32 --lr 3e-6 --games 256 --test-games 128 --temperature 0.3 --epochs 2 --group 4 --credit best
+10:27:05 simloop (re)started: --batch 32 --lr 3e-6 --games 256 --test-games 128 --temperature 0.3 --epochs 2 --group 4 --credit best
+12:32:19 simloop (re)started: --batch 32 --lr 3e-6 --games 256 --test-games 128 --temperature 0.3 --epochs 2 --group 4 --credit best --search 0.25 --search-workers 22
+13:02:10 simloop (re)started: --batch 32 --lr 3e-6 --games 256 --test-games 128 --temperature 0.3 --epochs 2 --group 4 --credit best --search 0.25 --search-workers 22 --search-step 0.3
+14:36:50 simloop (re)started: --batch 32 --lr 3e-6 --games 256 --test-games 128 --temperature 0.3 --epochs 2 --group 4 --credit best --search 0.25 --search-workers 22 --search-step 0.3
+15:47:54 simloop (re)started: --batch 32 --lr 3e-6 --games 256 --test-games 128 --temperature 0.3 --epochs 2 --group 4 --credit best --search 0.25 --search-workers 22 --search-step 0.5
+16:43:20 simloop (re)started: --batch 32 --lr 3e-6 --games 256 --test-games 128 --temperature 0.3 --epochs 2 --group 4 --credit best --search 0.25 --search-workers 22 --search-step 0.5
+17:53:55 simloop stopped: end of Stage 2
