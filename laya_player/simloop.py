@@ -256,7 +256,7 @@ def _search_labels(traj: list[list[dict]], jobs: dict, w: float, step: float, st
             top.append(max(range(len(dist)), key=dist.__getitem__) in labels)
             ign = [j for j, kk in enumerate(keys) if kk[0] == "use"]
             out.append({"phase": d["phase"], "state": d["state"], "options": d["options"], "label": labels[0],
-                        "labels": labels, "target": _target(dist, labels, ign, step), "w": w})
+                        "labels": labels, "target": _target(dist, labels, ign, step), "w": w, "agree0": mass[-1]})
     if stats is not None:
         kinds = [r["kind"] for r in res.values() if r]
         stats.update(search_turns=len(res), search_clear=kinds.count("clear"),
@@ -265,6 +265,17 @@ def _search_labels(traj: list[list[dict]], jobs: dict, w: float, step: float, st
                      search_agree=round(statistics.mean(mass), 3) if mass else None,
                      search_top=round(statistics.mean(top), 3) if top else None)
     return out
+
+
+@torch.no_grad()
+def label_mass(pol, exs: list[dict]) -> float:
+    """Mean probability (temperature 1) the policy puts on each example's labelled clicks."""
+    out = []
+    for i in range(0, len(exs), infer_chunk()):
+        part = exs[i:i + infer_chunk()]
+        for e, row in zip(part, pol.logits(part)):
+            out.append(float(torch.softmax(row[: len(e["options"])], -1)[e["labels"]].sum()))
+    return statistics.mean(out) if out else float("nan")
 
 
 def score(summ: list[dict]) -> float:
@@ -339,6 +350,11 @@ def main():
                          search=(pool, args.search, args.search_w, args.search_step) if pool else None, stats=sst)
         t1 = time.time()
         pol.train(dec, epochs=args.epochs, batch_size=args.batch, lr=args.lr, log=lambda m: None)
+        fit = [d for d in dec if "agree0" in d]
+        if fit:  # does training reach the search's clicks on the very states it trained on?
+            fit = random.sample(fit, min(512, len(fit)))
+            sst["fit_before"] = round(statistics.mean(d["agree0"] for d in fit), 3)
+            sst["fit_after"] = round(label_mass(pol, fit), 3)
         t2 = time.time()
         mine_g, theirs_g, t = head_to_head(pol, st["champion"], work, args.test_games)
         mine, theirs = statistics.mean(mine_g), statistics.mean(theirs_g)
@@ -365,6 +381,7 @@ def main():
             f"play {rec['play_s']}s train {rec['train_s']}s test {rec['test_s']}s"
             + (f" | search {sst['search_turns']} turns ({sst['search_clear']} clear, {sst['search_errors']} err) "
                f"-> {sst['search_examples']} clicks, agree {sst['search_agree']} top {sst['search_top']}, "
+               f"fit {sst.get('fit_before')}->{sst.get('fit_after')}, "
                f"wait {sst['search_wait_s']}s" if sst else ""))
 
 
