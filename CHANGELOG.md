@@ -35,6 +35,11 @@
   when scoring, so their descriptions read e.g. "(Currently $0)" instead of "$4". On seed TZIUSW9J that flipped a
   near-tie click and the runs ended at 1 vs 19 rounds; the simulator now computes the same values (replays 1 round).
 - Self-play sampling temperature 0.4 → 0.3 (sampled games had slid to ~2 rounds while greedy held ~5–6).
+- **Self-play credit: best game per seed** (`--credit best`). With PPO's clip, a near-certain click can only be pushed
+  down after a loss, never much further up after a win, so the training weights kept flattening: their greedy test held
+  ~5.3 rounds while their sampled games fell 4.1 → 1.2 (iterations 11–19), poisoning the training data. The champion
+  itself samples fine (raw0010: greedy 6.54, T 0.1 6.62, T 0.3 5.08, T 0.6 2.00). Training weights were reset to the
+  champion and now learn only from each seed's best sibling game (positive examples sharpen instead of flatten).
 - RL iterations record every game (self-play, new weights, champion per seed); the Stage 2 chart plots all of them.
 
 ## v1.1 — Stage 2: raw clicks, pure RL (2026-10-07)
