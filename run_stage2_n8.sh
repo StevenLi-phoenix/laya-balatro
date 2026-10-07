@@ -28,4 +28,4 @@ fi
 
 note "simloop start"
 echo $$ > simloop.pid
-exec $PY -u -m laya_player.simloop --init ckpt/raw_init.pt --batch 32 --lr 6e-6 --games 256 --test-games 128 --temperature 0.3 --epochs 2 --group 4 --credit best >> runs_sim/stdout.txt 2>> runs_sim/stderr.txt
+exec $PY -u -m laya_player.simloop --init ckpt/raw_init.pt --batch 32 --lr 3e-6 --games 256 --test-games 128 --temperature 0.3 --epochs 2 --group 4 --credit best >> runs_sim/stdout.txt 2>> runs_sim/stderr.txt
