@@ -98,7 +98,7 @@ class Policy:
 
     def train(self, examples: list[dict], epochs: float = 1.0, batch_size: int = 8, lr: float = 2e-5,
               log=print, max_steps: int | None = None, clip: float = 0.2) -> dict:
-        """Examples: {phase, state, options, label|labels, ignore?, w?, old_lp?}. Imitation: w>=0 -> w*CE,
+        """Examples: {phase, state, options, label|labels, ignore?, target?, w?, old_lp?}. Imitation: w>=0 -> w*CE,
         w<0 -> |w| * -log(1 - p_label). Self-play examples carrying old_lp use the PPO clipped
         surrogate with advantage w."""
         if self.opt is None:
@@ -129,6 +129,15 @@ class Policy:
             lp = logp.masked_fill(~ok, -1e4).logsumexp(-1)  # log P(any correct option)
             neg = torch.log1p(-lp.exp().clamp(max=1 - 1e-4))
             per = torch.where(w >= 0, -w * lp, w.abs() * -neg)
+            if any("target" in e for e in batch):
+                # soft target (search labels within a trust region): cross-entropy to the target distribution
+                tg = torch.zeros_like(lg)
+                for r, e in enumerate(batch):
+                    if "target" in e:
+                        tg[r, : len(e["target"])] = torch.tensor(e["target"], device=self.device)
+                has_t = torch.tensor(["target" in e for e in batch], device=self.device)
+                soft = -w * (tg * F.log_softmax(lg, -1)).sum(-1)
+                per = torch.where(has_t, soft, per)
             if any("old_lp" in e for e in batch):
                 # Self-play: PPO clipped surrogate. The advantage w moves p(click) at most +-clip
                 # relative to the policy that played the game, so one iteration cannot drag

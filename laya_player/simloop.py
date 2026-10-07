@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import pickle
 import random
 import statistics
@@ -51,9 +52,11 @@ def infer_chunk() -> int:
 
 @torch.no_grad()
 def choose_batch(pol, items: list[tuple[str, str, list[str]]], temperature: float, greedy: bool,
-                 chunk: int | None = None, logps: list[float] | None = None) -> list[int]:
+                 chunk: int | None = None, logps: list[float] | None = None,
+                 dists: list[list[float]] | None = None) -> list[int]:
     """Pick an option per item. `logps`, if given, receives log p(pick) under the raw policy
-    (temperature 1): the behaviour probability PPO's ratio is measured against."""
+    (temperature 1): the behaviour probability PPO's ratio is measured against; `dists` the whole
+    distribution (the trust region search labels are taught within)."""
     chunk = chunk or infer_chunk()
     out = []
     pol.model.eval()
@@ -65,8 +68,11 @@ def choose_batch(pol, items: list[tuple[str, str, list[str]]], temperature: floa
             z = row[: len(op)] / max(temperature, 1e-3)
             k = int(z.argmax()) if greedy else int(torch.multinomial(torch.softmax(z, -1), 1))
             out.append(k)
+            lsm = torch.log_softmax(row[: len(op)], -1)
             if logps is not None:
-                logps.append(float(torch.log_softmax(row[: len(op)], -1)[k]))
+                logps.append(float(lsm[k]))
+            if dists is not None:
+                dists.append(lsm.tolist())
     return out
 
 
@@ -76,7 +82,7 @@ def play(pol, seeds: list[str], temperature: float, greedy: bool, record: bool,
     """credit: "round" = reward-to-go baselined by round index across all games; "seed" = baselined by
     the other games on the same seed that reached the same round (needs repeated seeds; deal luck
     cancels); "best" = keep only each seed's best game, as positive examples.
-    search: (process pool, share of hand turns, weight): the hand clicks of searched turns are
+    search: (process pool, share of hand turns, weight, step): the hand clicks of searched turns are
     labelled by the simulator search (search.py) instead of by the run's outcome."""
     games = [SimGame(s, bosses=(bosses[i] if bosses else None)) for i, s in enumerate(seeds)]
     traj: list[list[dict]] = [[] for _ in games]
@@ -119,8 +125,9 @@ def play(pol, seeds: list[str], temperature: float, greedy: bool, record: bool,
         if not live:
             break
         lps: list[float] = []
-        picks = choose_batch(pol, items, temperature, greedy, logps=lps)
-        for gi, k, lp, (s, txt, opts, acts) in zip(live, picks, lps, meta):
+        dists: list[list[float]] = []
+        picks = choose_batch(pol, items, temperature, greedy, logps=lps, dists=dists)
+        for gi, k, lp, dist, (s, txt, opts, acts) in zip(live, picks, lps, dists, meta):
             g = games[gi]
             if not g.apply(s, acts[k]):
                 g.banned.setdefault(txt, set()).add(opts[k])
@@ -130,12 +137,12 @@ def play(pol, seeds: list[str], temperature: float, greedy: bool, record: bool,
                      "round": round_of[gi], "round_won": False, "old_lp": lp}
                 if jobs.get((gi, turn[gi])) is not None:
                     d["search"] = ((gi, turn[gi]), list(s.get("selected", [])), s.get("_hidx") or [],
-                                   [game.action_key(a) for a in acts])
+                                   [game.action_key(a) for a in acts], dist)
                 traj[gi].append(d)
             if acts[k]["t"] not in ("select", "deselect", "choose_pick", "cancel_pick"):
                 turn[gi] += 1
     torch.cuda.empty_cache()  # long prompts fragment VRAM; an 8 GB card spills to shared memory otherwise
-    searched = _search_labels(traj, jobs, search[2], stats) if search and record else []
+    searched = _search_labels(traj, jobs, search[2], search[3], stats) if search and record else []
     summaries = [{"seed": g.seed, "rounds_won": g.rounds_won, "max_ante": g.max_ante, "won": bool(g.gs.get("won")),
                   "illegal": g.illegal, "steps": g.steps} for g in games]
     decisions = list(searched)
@@ -200,9 +207,23 @@ def _good(key: tuple, sel: list[int], kind: str, tgt: set[int]) -> bool:
     return key[0] == kind and set(sel) == tgt
 
 
-def _search_labels(traj: list[list[dict]], jobs: dict, w: float, stats: dict | None) -> list[dict]:
-    """Search results -> click labels: every click that moves toward one of the search's best moves
-    is correct; "use <consumable>" clicks are left out of the judgement (`ignore`)."""
+def _target(dist: list[float], labels: list[int], ignore: list[int], step: float) -> list[float]:
+    """Conservative target: the playing policy moved `step` of the way toward the search's clicks.
+    Imitating the labels outright (v1.2 first try) dragged ~8k near-certain clicks at once and broke
+    the click sequences (head-to-head 2.48 vs 5.64); cross-entropy to this target stops at it.
+    Consumable clicks keep their probability."""
+    p = [math.exp(x) for x in dist]
+    ign = set(ignore)
+    rest = sum(q for j, q in enumerate(p) if j not in ign) or 1.0
+    t = [0.0 if j in ign else (1 - step) * q / rest for j, q in enumerate(p)]
+    for j in labels:
+        t[j] += step / len(labels)
+    return [round(p[j] if j in ign else x * rest, 6) for j, x in enumerate(t)]
+
+
+def _search_labels(traj: list[list[dict]], jobs: dict, w: float, step: float, stats: dict | None) -> list[dict]:
+    """Search results -> click targets: every click that moves toward one of the search's best moves
+    is correct; "use <consumable>" clicks are left out of the judgement."""
     t0 = time.time()
     res, errors = {}, 0
     for key, fut in jobs.items():
@@ -217,7 +238,7 @@ def _search_labels(traj: list[list[dict]], jobs: dict, w: float, stats: dict | N
         for d in tr:
             if "search" not in d:
                 continue
-            key, sel, hidx, keys = d.pop("search")
+            key, sel, hidx, keys, dist = d.pop("search")
             r = res.get(key)
             if not r:
                 continue
@@ -231,8 +252,9 @@ def _search_labels(traj: list[list[dict]], jobs: dict, w: float, stats: dict | N
             if not labels:
                 continue
             d["labels"] = labels
+            ign = [j for j, kk in enumerate(keys) if kk[0] == "use"]
             out.append({"phase": d["phase"], "state": d["state"], "options": d["options"], "label": labels[0],
-                        "labels": labels, "ignore": [j for j, kk in enumerate(keys) if kk[0] == "use"], "w": w})
+                        "labels": labels, "target": _target(dist, labels, ign, step), "w": w})
     if stats is not None:
         kinds = [r["kind"] for r in res.values() if r]
         stats.update(search_turns=len(res), search_clear=kinds.count("clear"),
@@ -284,6 +306,8 @@ def main():
                     help="share of self-play hand turns labelled by simulator search (0 = pure outcome credit)")
     ap.add_argument("--search-workers", type=int, default=20, help="CPU processes for the search")
     ap.add_argument("--search-w", type=float, default=1.0, help="loss weight of a search-labelled click")
+    ap.add_argument("--search-step", type=float, default=0.3,
+                    help="per iteration, move this share of each searched click's probability onto the search's clicks")
     args = ap.parse_args()
     OUT.mkdir(exist_ok=True)
     CK.mkdir(exist_ok=True)
@@ -308,7 +332,7 @@ def main():
         seeds = [s for s in rand_seeds(args.games // args.group) for _ in range(args.group)]
         sst: dict = {}
         summ, dec = play(pol, seeds, args.temperature, False, True, credit=args.credit if args.group > 1 else "round",
-                         search=(pool, args.search, args.search_w) if pool else None, stats=sst)
+                         search=(pool, args.search, args.search_w, args.search_step) if pool else None, stats=sst)
         t1 = time.time()
         pol.train(dec, epochs=args.epochs, batch_size=args.batch, lr=args.lr, log=lambda m: None)
         t2 = time.time()
