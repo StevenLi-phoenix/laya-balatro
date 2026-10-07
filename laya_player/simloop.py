@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import pickle
 import random
 import statistics
 import string
@@ -35,23 +36,25 @@ def log(msg: str) -> None:
         f.write(line + "\n")
 
 
-def _infer_chunk() -> int:
+_CHUNK: list[int] = []
+
+
+def infer_chunk() -> int:
     """Prompts per forward pass. 48 x 1024 tokens overflows an 8 GB card into shared memory (a
-    ~5x slowdown), so small cards get 16; a 16 GB card takes 64."""
-    if not torch.cuda.is_available():
-        return 16
-    mem = torch.cuda.get_device_properties(0).total_memory
-    return 128 if mem >= 15 * 2 ** 30 else 64 if mem >= 12 * 2 ** 30 else 16
-
-
-INFER_CHUNK = _infer_chunk()
+    ~5x slowdown), so small cards get 16; a 16 GB card takes 64. Asked lazily: search workers
+    import this module and must not each open a CUDA context."""
+    if not _CHUNK:
+        mem = torch.cuda.get_device_properties(0).total_memory if torch.cuda.is_available() else 0
+        _CHUNK.append(128 if mem >= 15 * 2 ** 30 else 64 if mem >= 12 * 2 ** 30 else 16)
+    return _CHUNK[0]
 
 
 @torch.no_grad()
 def choose_batch(pol, items: list[tuple[str, str, list[str]]], temperature: float, greedy: bool,
-                 chunk: int = INFER_CHUNK, logps: list[float] | None = None) -> list[int]:
+                 chunk: int | None = None, logps: list[float] | None = None) -> list[int]:
     """Pick an option per item. `logps`, if given, receives log p(pick) under the raw policy
     (temperature 1): the behaviour probability PPO's ratio is measured against."""
+    chunk = chunk or infer_chunk()
     out = []
     pol.model.eval()
     for i in range(0, len(items), chunk):
@@ -68,13 +71,18 @@ def choose_batch(pol, items: list[tuple[str, str, list[str]]], temperature: floa
 
 
 def play(pol, seeds: list[str], temperature: float, greedy: bool, record: bool,
-         bosses: list[list[str]] | None = None, credit: str = "round") -> tuple[list[dict], list[dict]]:
+         bosses: list[list[str]] | None = None, credit: str = "round", search=None,
+         stats: dict | None = None) -> tuple[list[dict], list[dict]]:
     """credit: "round" = reward-to-go baselined by round index across all games; "seed" = baselined by
     the other games on the same seed that reached the same round (needs repeated seeds; deal luck
-    cancels); "best" = keep only each seed's best game, as positive examples."""
+    cancels); "best" = keep only each seed's best game, as positive examples.
+    search: (process pool, share of hand turns, weight): the hand clicks of searched turns are
+    labelled by the simulator search (search.py) instead of by the run's outcome."""
     games = [SimGame(s, bosses=(bosses[i] if bosses else None)) for i, s in enumerate(seeds)]
     traj: list[list[dict]] = [[] for _ in games]
     round_of = [0] * len(games)
+    turn = [0] * len(games)  # engine actions so far: the clicks between two of them form one hand turn
+    jobs: dict[tuple[int, int], object] = {}
     while True:
         live, items, meta = [], [], []
         for gi, g in enumerate(games):
@@ -100,6 +108,11 @@ def play(pol, seeds: list[str], temperature: float, greedy: bool, record: bool,
                     g.steps = 10 ** 6  # no legal play: end the run
                     continue
                 acts, opts = [fb], [game.action_text(s, fb)]
+            if search and record and s["phase"] == "hand" and (gi, turn[gi]) not in jobs:
+                # the engine state is fixed for the whole turn (clicks are local), so snapshot it once
+                from .search import search_blob
+                jobs[(gi, turn[gi])] = (search[0].submit(search_blob, pickle.dumps(g.gs, pickle.HIGHEST_PROTOCOL))
+                                        if random.random() < search[1] else None)
             live.append(gi)
             items.append((s["phase"], txt, opts))
             meta.append((s, txt, opts, acts))
@@ -113,19 +126,26 @@ def play(pol, seeds: list[str], temperature: float, greedy: bool, record: bool,
                 g.banned.setdefault(txt, set()).add(opts[k])
                 continue
             if record and len(opts) > 1:
-                traj[gi].append({"phase": s["phase"], "state": txt, "options": opts, "label": k,
-                                 "round": round_of[gi], "round_won": False, "old_lp": lp})
+                d = {"phase": s["phase"], "state": txt, "options": opts, "label": k,
+                     "round": round_of[gi], "round_won": False, "old_lp": lp}
+                if jobs.get((gi, turn[gi])) is not None:
+                    d["search"] = ((gi, turn[gi]), list(s.get("selected", [])), s.get("_hidx") or [],
+                                   [game.action_key(a) for a in acts])
+                traj[gi].append(d)
+            if acts[k]["t"] not in ("select", "deselect", "choose_pick", "cancel_pick"):
+                turn[gi] += 1
     torch.cuda.empty_cache()  # long prompts fragment VRAM; an 8 GB card spills to shared memory otherwise
+    searched = _search_labels(traj, jobs, search[2], stats) if search and record else []
     summaries = [{"seed": g.seed, "rounds_won": g.rounds_won, "max_ante": g.max_ante, "won": bool(g.gs.get("won")),
                   "illegal": g.illegal, "steps": g.steps} for g in games]
-    decisions = []
+    decisions = list(searched)
     if record and credit in ("seed", "best"):
-        return summaries, _seed_credit(summaries, traj, credit)
+        return summaries, searched + _seed_credit(summaries, traj, credit)
     if record:
         # Reward-to-go: a decision made in round r is credited with the rounds cleared after it,
         # baselined against other decisions made in the same round this batch. A round-3 shop
         # purchase is then judged by rounds 3+, not by how the run's opening went.
-        rows = [(d, x["rounds_won"] - d["round"]) for x, tr in zip(summaries, traj) for d in tr]
+        rows = [(d, x["rounds_won"] - d["round"]) for x, tr in zip(summaries, traj) for d in tr if "labels" not in d]
         by_round: dict[int, list[float]] = {}
         for d, ret in rows:
             by_round.setdefault(d["round"], []).append(ret)
@@ -147,6 +167,7 @@ def _seed_credit(summaries: list[dict], traj: list[list[dict]], credit: str) -> 
     for gi, x in enumerate(summaries):
         by_seed.setdefault(x["seed"], []).append(gi)
     keep = lambda d: {k: d[k] for k in ("phase", "state", "options", "label", "old_lp")}
+    traj = [[d for d in tr if "labels" not in d] for tr in traj]  # search-labelled clicks are taught by search
     out = []
     if credit == "best":
         for gs in by_seed.values():
@@ -167,6 +188,56 @@ def _seed_credit(summaries: list[dict], traj: list[list[dict]], credit: str) -> 
         w = max(-2.0, min(2.0, a / sd))
         if abs(w) >= 0.1:
             out.append(keep(d) | {"w": round(w, 3)})
+    return out
+
+
+def _good(key: tuple, sel: list[int], kind: str, tgt: set[int]) -> bool:
+    """Does this click move the selection toward committing `kind` on exactly the cards `tgt`?"""
+    if key[0] == "select":
+        return key[1] in tgt and key[1] not in sel
+    if key[0] == "deselect":
+        return key[1] not in tgt
+    return key[0] == kind and set(sel) == tgt
+
+
+def _search_labels(traj: list[list[dict]], jobs: dict, w: float, stats: dict | None) -> list[dict]:
+    """Search results -> click labels: every click that moves toward one of the search's best moves
+    is correct; "use <consumable>" clicks are left out of the judgement (`ignore`)."""
+    t0 = time.time()
+    res, errors = {}, 0
+    for key, fut in jobs.items():
+        if fut is None:
+            continue
+        try:
+            res[key] = fut.result()
+        except Exception:  # noqa: BLE001 -- a failed search only costs its labels
+            errors += 1
+    out = []
+    for tr in traj:
+        for d in tr:
+            if "search" not in d:
+                continue
+            key, sel, hidx, keys = d.pop("search")
+            r = res.get(key)
+            if not r:
+                continue
+            canon = {e: c for c, e in enumerate(hidx)}
+            tg = [(k, {canon.get(i, i) for i in sub}) for k, sub in r["targets"]]
+            fit = [t for t in tg if set(sel) <= t[1]]  # targets this selection is still on the way to
+            if not fit:  # off course: the nearest targets (fewest clicks away)
+                near = min(len(set(sel) ^ t[1]) for t in tg)
+                fit = [t for t in tg if len(set(sel) ^ t[1]) == near]
+            labels = [j for j, kk in enumerate(keys) if any(_good(kk, sel, k, t) for k, t in fit)]
+            if not labels:
+                continue
+            d["labels"] = labels
+            out.append({"phase": d["phase"], "state": d["state"], "options": d["options"], "label": labels[0],
+                        "labels": labels, "ignore": [j for j, kk in enumerate(keys) if kk[0] == "use"], "w": w})
+    if stats is not None:
+        kinds = [r["kind"] for r in res.values() if r]
+        stats.update(search_turns=len(res), search_clear=kinds.count("clear"),
+                     search_hidden=sum(1 for r in res.values() if not r), search_errors=errors,
+                     search_examples=len(out), search_wait_s=round(time.time() - t0))
     return out
 
 
@@ -209,6 +280,10 @@ def main():
     ap.add_argument("--group", type=int, default=1, help="games per seed (>1: same-seed credit, deal luck cancels)")
     ap.add_argument("--credit", choices=("seed", "best"), default="seed",
                     help="with --group: seed = advantage vs same-seed siblings (all games); best = only each seed's best game")
+    ap.add_argument("--search", type=float, default=0.0,
+                    help="share of self-play hand turns labelled by simulator search (0 = pure outcome credit)")
+    ap.add_argument("--search-workers", type=int, default=20, help="CPU processes for the search")
+    ap.add_argument("--search-w", type=float, default=1.0, help="loss weight of a search-labelled click")
     args = ap.parse_args()
     OUT.mkdir(exist_ok=True)
     CK.mkdir(exist_ok=True)
@@ -220,11 +295,20 @@ def main():
     pol = Policy(st["champion"])
     if st.get("work") and Path(st["work"]).exists():
         pol.load(st["work"])
-    log(f"start: champion {Path(st['champion']).name}, actions {'raw' if game.RAW else 'combo'}")
+    pool = None
+    if args.search > 0:
+        import multiprocessing
+        from concurrent.futures import ProcessPoolExecutor
+        # spawn: the workers must not inherit this process's CUDA context
+        pool = ProcessPoolExecutor(args.search_workers, mp_context=multiprocessing.get_context("spawn"))
+    log(f"start: champion {Path(st['champion']).name}, actions {'raw' if game.RAW else 'combo'}"
+        + (f", search {args.search:g} of hand turns x{args.search_workers} workers" if pool else ""))
     for it in range(st["iter"] + 1, st["iter"] + 1 + args.iters):
         t0 = time.time()
         seeds = [s for s in rand_seeds(args.games // args.group) for _ in range(args.group)]
-        summ, dec = play(pol, seeds, args.temperature, False, True, credit=args.credit if args.group > 1 else "round")
+        sst: dict = {}
+        summ, dec = play(pol, seeds, args.temperature, False, True, credit=args.credit if args.group > 1 else "round",
+                         search=(pool, args.search, args.search_w) if pool else None, stats=sst)
         t1 = time.time()
         pol.train(dec, epochs=args.epochs, batch_size=args.batch, lr=args.lr, log=lambda m: None)
         t2 = time.time()
@@ -233,7 +317,7 @@ def main():
         rec = {"iter": it, "train_rounds": score(summ), "test_rounds": mine, "champion_rounds": theirs, "t": round(t, 2),
                "train_games": [x["rounds_won"] for x in summ], "test_games": mine_g, "champion_games": theirs_g,
                "decisions": len(dec), "play_s": round(t1 - t0), "train_s": round(t2 - t1),
-               "test_s": round(time.time() - t2)}
+               "test_s": round(time.time() - t2)} | sst
         improved = mine > theirs and t >= args.promote_t
         if improved:
             path = CK / f"raw{it:04d}.pt"
@@ -250,7 +334,9 @@ def main():
             f.write(json.dumps(rec) + "\n")
         log(f"iter {it}: train {rec['train_rounds']:.2f} | test {mine:.2f} vs champion {theirs:.2f} (t {t:+.1f})"
             f"{' NEW' if improved else ' rollback' if rec.get('rollback') else ''} | {len(dec)} dec, "
-            f"play {rec['play_s']}s train {rec['train_s']}s test {rec['test_s']}s")
+            f"play {rec['play_s']}s train {rec['train_s']}s test {rec['test_s']}s"
+            + (f" | search {sst['search_turns']} turns ({sst['search_clear']} clear, {sst['search_errors']} err) "
+               f"-> {sst['search_examples']} clicks, wait {sst['search_wait_s']}s" if sst else ""))
 
 
 if __name__ == "__main__":

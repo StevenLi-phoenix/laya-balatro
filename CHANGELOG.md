@@ -2,6 +2,16 @@
 
 ## v1.2 (unreleased)
 
+- **Search labels for hand decisions** (`simloop --search 0.25`, new `search.py`). RL judged a hand click only
+  through the run's final round count, and stalled: the champion's median run still died in Ante 1–2. Now a quarter
+  of self-play hand turns are searched on CPU workers while the GPU keeps playing. The search sees only what a player
+  sees (no draw order, no RNG). It scores every possible play exactly with jackdaw's pipeline. Then it rolls out the
+  best plays and a set of discard draws (flush, straight, kinds, low cards) on reshuffled decks, scoring each by
+  P(blind cleared) plus a little per hand to spare. Every click toward one of the best moves becomes a label;
+  consumable clicks are left out of the judgement. Laya's interface is unchanged: raw clicks, no estimates. Shop,
+  pack and blind decisions stay pure RL. Benchmark on 24 seeds with a fixed shop rule: greedy hand play
+  8.75 rounds (median 9.5), search 10.46 (median 11). Laya's champion averages ~6.2 with its own shop play, so hand
+  play is where it loses.
 - **Targeted pack tarots are usable.** In v1.1 a targeted card in an Arcana/Spectral pack was only offered after
   hand cards were selected, so Laya never saw it (19 such packs in real runs: 9 untargeted takes, 10 skips, 0 uses).
   Now it is always visible as a two-step choice: `take tarot Strength (then choose its target cards)`, then

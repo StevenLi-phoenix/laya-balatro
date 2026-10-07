@@ -98,7 +98,7 @@ class Policy:
 
     def train(self, examples: list[dict], epochs: float = 1.0, batch_size: int = 8, lr: float = 2e-5,
               log=print, max_steps: int | None = None, clip: float = 0.2) -> dict:
-        """Examples: {phase, state, options, label|labels, w?, old_lp?}. Imitation: w>=0 -> w*CE,
+        """Examples: {phase, state, options, label|labels, ignore?, w?, old_lp?}. Imitation: w>=0 -> w*CE,
         w<0 -> |w| * -log(1 - p_label). Self-play examples carrying old_lp use the PPO clipped
         surrogate with advantage w."""
         if self.opt is None:
@@ -119,7 +119,13 @@ class Policy:
             lg = self.logits(batch)
             ok = self._label_mask(batch, lg.shape[1])
             w = torch.tensor([e.get("w", 1.0) for e in batch], device=self.device, dtype=torch.float32)
-            logp = F.log_softmax(lg, -1)
+            # `ignore`: options a label neither rewards nor punishes (search labels say nothing about
+            # using a consumable mid-hand), left out of the softmax the label is judged in
+            ign = torch.zeros_like(ok)
+            for r, e in enumerate(batch):
+                for k in e.get("ignore") or ():
+                    ign[r, k] = True
+            logp = F.log_softmax(lg.masked_fill(ign & ~ok, -1e4), -1)
             lp = logp.masked_fill(~ok, -1e4).logsumexp(-1)  # log P(any correct option)
             neg = torch.log1p(-lp.exp().clamp(max=1 - 1e-4))
             per = torch.where(w >= 0, -w * lp, w.abs() * -neg)
