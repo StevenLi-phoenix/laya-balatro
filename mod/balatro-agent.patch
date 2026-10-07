@@ -1,8 +1,59 @@
 diff --git a/mod/src/actions.lua b/mod/src/actions.lua
-index 513baea..7c8279c 100644
+index 513baea..73a1087 100644
 --- a/mod/src/actions.lua
 +++ b/mod/src/actions.lua
-@@ -815,9 +815,29 @@ handlers.reroll_shop = function(args)
+@@ -294,21 +294,48 @@ local RUN_PHASES = {
+ 
+ -- Settle builders: async actions return these so the dispatcher holds the
+ -- response until the game can act on the result.
++-- What still holds the event queues open when a settle times out (logged and
++-- returned so a wait that always runs to its timeout can be traced).
++local function pending_events()
++  local out = {}
++  local manager = G and G.E_MANAGER
++  if not manager or not manager.queues then return out end
++  for name, queue in pairs(manager.queues) do
++    for i = 1, #queue do
++      local e = queue[i]
++      if not e.no_delete and #out < 8 then
++        out[#out + 1] = string.format("%s#%d trigger=%s blocking=%s blockable=%s delay=%s timer=%s",
++          name, i, tostring(e.trigger), tostring(e.blocking), tostring(e.blockable), tostring(e.delay),
++          tostring(e.timer))
++      end
++    end
++  end
++  return out
++end
++
+ local function settle_result(data, timed_out)
+   data = data or {}
+   data.timed_out = timed_out or nil
++  if timed_out then
++    data.pending = pending_events()
++    print("[balatro-agent] settle timed out; pending: " .. table.concat(data.pending, " | "))
++  end
+   return { ok = true, data = data }
+ end
+ 
+ -- Resolves once the event manager drains the animation the action queued.
+ -- no_delete events are skipped: they outlive their action by design (input
+--- locks, run starts) and would hold every wait open.
++-- locks, run starts) and would hold every wait open. So are background
++-- watchers (non-blocking and non-blockable): the game never waits on them, and
++-- one sits in the base queue for the whole shop, which ran every shop/pack
++-- action into its 8 s timeout.
+ local function events_drained()
+   local manager = G and G.E_MANAGER
+   if not manager or not manager.queues then return false end
+   for _, queue in pairs(manager.queues) do
+     for i = 1, #queue do
+-      if not queue[i].no_delete then return false end
++      local e = queue[i]
++      if not e.no_delete and not (e.blocking == false and e.blockable == false) then return false end
+     end
+   end
+   return true
+@@ -815,9 +842,29 @@ handlers.reroll_shop = function(args)
    return anim_settle({ rerolled = true }, 8)
  end
  
@@ -32,7 +83,7 @@ index 513baea..7c8279c 100644
  
    G.FUNCS.toggle_shop()
  
-@@ -835,7 +855,9 @@ local function cash_out_settle(pressed)
+@@ -835,7 +882,9 @@ local function cash_out_settle(pressed)
          if not G or not G.STATES then
            return err("WRONG_PHASE", "Game state is not available")
          end
@@ -43,7 +94,7 @@ index 513baea..7c8279c 100644
            return settle_result({ cashed_out = true }, false)
          end
          if not pressed and G.STATE == G.STATES.ROUND_EVAL then
-@@ -901,6 +923,60 @@ handlers.restart = function(args)
+@@ -901,6 +950,60 @@ handlers.restart = function(args)
    return phase_settle({ "BLIND_SELECT" }, { restarted = true }, 15)
  end
  

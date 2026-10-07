@@ -97,8 +97,10 @@ class Policy:
                                  weight_decay=0.01)
 
     def train(self, examples: list[dict], epochs: float = 1.0, batch_size: int = 8, lr: float = 2e-5,
-              log=print, max_steps: int | None = None) -> dict:
-        """Examples: {phase, state, options, label, w?}. w>=0 -> w*CE; w<0 -> |w| * -log(1 - p_label)."""
+              log=print, max_steps: int | None = None, clip: float = 0.2) -> dict:
+        """Examples: {phase, state, options, label|labels, w?, old_lp?}. Imitation: w>=0 -> w*CE,
+        w<0 -> |w| * -log(1 - p_label). Self-play examples carrying old_lp use the PPO clipped
+        surrogate with advantage w."""
         if self.opt is None:
             self.opt = self._make_opt(lr)
         steps = int(math.ceil(len(examples) * epochs / batch_size))
@@ -115,19 +117,29 @@ class Policy:
                 order += random.sample(range(len(examples)), len(examples))
             batch = [examples[order.pop()] for _ in range(batch_size)]
             lg = self.logits(batch)
-            y = torch.tensor([e["label"] for e in batch], device=self.device)
+            ok = self._label_mask(batch, lg.shape[1])
             w = torch.tensor([e.get("w", 1.0) for e in batch], device=self.device, dtype=torch.float32)
             logp = F.log_softmax(lg, -1)
-            lp = logp.gather(1, y[:, None]).squeeze(1)
+            lp = logp.masked_fill(~ok, -1e4).logsumexp(-1)  # log P(any correct option)
             neg = torch.log1p(-lp.exp().clamp(max=1 - 1e-4))
-            loss = torch.where(w >= 0, -w * lp, w.abs() * -neg).mean()
+            per = torch.where(w >= 0, -w * lp, w.abs() * -neg)
+            if any("old_lp" in e for e in batch):
+                # Self-play: PPO clipped surrogate. The advantage w moves p(click) at most +-clip
+                # relative to the policy that played the game, so one iteration cannot drag
+                # confident correct clicks (e.g. "play selected") down because a round was lost.
+                has = torch.tensor(["old_lp" in e for e in batch], device=self.device)
+                old = torch.tensor([e.get("old_lp", 0.0) for e in batch], device=self.device)
+                ratio = (lp - old).exp()
+                ppo = -torch.minimum(ratio * w, ratio.clamp(1 - clip, 1 + clip) * w)
+                per = torch.where(has, ppo, per)
+            loss = per.mean()
             self.opt.zero_grad(set_to_none=True)
             loss.backward()
             torch.nn.utils.clip_grad_norm_([p for m in self.trainable for p in m.parameters()], 1.0)
             self.opt.step()
             sched.step()
             run_loss += float(loss)
-            run_acc += float((lg.argmax(-1) == y).float().mean())
+            run_acc += float(ok.gather(1, lg.argmax(-1, keepdim=True)).float().mean())
             n += 1
             if (step + 1) % 50 == 0 or step + 1 == steps:
                 log(f"  step {step + 1}/{steps} loss {run_loss / n:.4f} acc {run_acc / n:.3f} "
@@ -139,6 +151,14 @@ class Policy:
         torch.cuda.empty_cache()
         return {"steps": steps}
 
+    def _label_mask(self, batch: list[dict], n: int) -> torch.Tensor:
+        """[B, n] bool: the correct option(s). `labels` (several acceptable clicks) or `label`."""
+        ok = torch.zeros(len(batch), n, dtype=torch.bool, device=self.device)
+        for r, e in enumerate(batch):
+            for k in e.get("labels") or [e["label"]]:
+                ok[r, k] = True
+        return ok
+
     @torch.no_grad()
     def evaluate(self, examples: list[dict], batch_size: int = 16) -> dict:
         self.model.eval()
@@ -147,7 +167,7 @@ class Policy:
             batch = examples[i: i + batch_size]
             pred = self.logits(batch).argmax(-1).tolist()
             for e, p in zip(batch, pred):
-                by_phase.setdefault(e["phase"], []).append(int(p == e["label"]))
+                by_phase.setdefault(e["phase"], []).append(int(p in (e.get("labels") or [e["label"]])))
         out = {k: round(sum(v) / len(v), 3) for k, v in by_phase.items()}
         out["all"] = round(sum(sum(v) for v in by_phase.values()) / max(1, sum(len(v) for v in by_phase.values())), 3)
         return out

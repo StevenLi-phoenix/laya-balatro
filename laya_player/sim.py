@@ -297,11 +297,13 @@ class SimGame:
         self.max_ante = 1
         self.illegal = 0
         self.steps = 0
+        self.selected: list[int] = []  # raw mode: hand cards clicked so far in this decision
+        self.deselects = 0
 
     @property
     def over(self) -> bool:
         # a won run continues into endless (the engine keeps advancing antes after `won`)
-        return _val(self.gs["phase"]) == "game_over" or self.steps > 6000
+        return _val(self.gs["phase"]) == "game_over" or self.steps > (20000 if game.RAW else 6000)
 
     def pending(self) -> dict | None:
         while not self.over:
@@ -314,14 +316,25 @@ class SimGame:
             if s is None:
                 raise RuntimeError(f"unhandled phase {ph}")
             self.max_ante = max(self.max_ante, s["ante"])
+            if game.RAW and s.get("hand"):
+                s["selected"] = list(self.selected)
+                s["sel_budget"] = game.SELECT_BUDGET - self.deselects
             return s
         return None
 
     def apply(self, s: dict, a: dict) -> bool:
         self.steps += 1
+        if a["t"] == "select":  # a click changes only the selection, not the engine state
+            self.selected.append(a["card"])
+            return True
+        if a["t"] == "deselect":
+            self.selected.remove(a["card"])
+            self.deselects += 1
+            return True
         try:
             self.gs = engine.step(self.gs, to_engine(s, a))
-            return True
         except (IllegalActionError, IndexError, KeyError, ValueError):
             self.illegal += 1
             return False
+        self.selected, self.deselects = [], 0
+        return True

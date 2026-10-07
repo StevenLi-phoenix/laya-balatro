@@ -117,13 +117,16 @@ def main():
     n = build_srt(lines, t0, args.speed, srt)
     title = (f"Laya (421M ModernBERT decision model) plays Balatro - {Path(ck).stem}, seed {summary.get('seed')}, "
              f"{args.speed:g}x speed").replace(":", r"\:").replace("'", "")
-    srt_arg = str(srt).replace("\\", "/").replace(":", r"\:")
+    # Windows ffmpeg builds have no fontconfig default: name the font file / folder explicitly
+    # (without them drawtext crashes with an access violation).
+    fonts = r"C\:/Windows/Fonts"
     vf = (f"setpts=PTS/{args.speed},scale=1280:-2,"
-          f"drawtext=text='{title}':x=12:y=10:fontsize=20:fontcolor=white:box=1:boxcolor=black@0.55:boxborderw=6,"
-          f"subtitles='{srt_arg}':force_style='FontName=Segoe UI Symbol,FontSize=15,Alignment=2,"
+          f"drawtext=fontfile='{fonts}/arial.ttf':text='{title}':x=12:y=10:fontsize=20:fontcolor=white:box=1:"
+          f"boxcolor=black@0.55:boxborderw=6,"
+          f"subtitles={srt.name}:fontsdir='{fonts}':force_style='FontName=Segoe UI Symbol,FontSize=15,Alignment=2,"
           f"BorderStyle=3,Outline=1,BackColour=&H90000000,MarginV=24'")
-    subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-i", str(raw), "-vf", vf, "-r", "30", "-an",
-                    "-c:v", "libx264", "-crf", "23", "-pix_fmt", "yuv420p", str(out)], check=True)
+    subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-i", raw.name, "-vf", vf, "-r", "30", "-an",
+                    "-c:v", "libx264", "-crf", "23", "-pix_fmt", "yuv420p", out.name], check=True, cwd=out.parent)
     print(f"{out}: {summary['rounds_won']} rounds, ante {summary['max_ante']}, {summary['outcome']}; {n} subtitles")
 
 

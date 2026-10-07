@@ -184,6 +184,45 @@ def make_example(s: dict, teacher: dict, rng: random.Random, max_opts: int = 14)
     return {"phase": s["phase"], "state": game.state_text(s), "options": opts, "label": order.index(label)}
 
 
+def _raw_example(s: dict, want, rng: random.Random) -> dict | None:
+    """One click: options are the raw candidates of `s`; `want(action) -> bool` marks correct ones."""
+    cands = game.raw_candidates(s)
+    order = list(range(len(cands)))
+    rng.shuffle(order)
+    opts = [game.action_text(s, cands[i]) for i in order]
+    labels = [k for k, i in enumerate(order) if want(cands[i])]
+    if not labels or len(cands) < 2 or len(set(opts)) != len(opts):
+        return None
+    return {"phase": s["phase"], "state": game.state_text(s), "options": opts, "label": labels[0], "labels": labels}
+
+
+def raw_examples(s: dict, teacher: dict, rng: random.Random) -> list[dict]:
+    """Teacher move -> the clicks a player makes: select its cards (any order), then commit."""
+    t = teacher["t"]
+    if s.get("hand"):
+        s = dict(s, selected=[], sel_budget=game.SELECT_BUDGET)
+    cards = teacher.get("cards") or teacher.get("targets")
+    if t in ("play", "discard", "use", "pick") and cards:
+        if len(set(cards)) != len(cards) or any(i >= len(s["hand"]) for i in cards):
+            return []
+        out, sel, rest = [], [], list(cards)
+        rng.shuffle(rest)
+        while rest:
+            st = dict(s, selected=list(sel))
+            ex = _raw_example(st, lambda a: a["t"] == "select" and a["card"] in rest, rng)
+            if ex is None:
+                return []
+            out.append(ex)
+            sel.append(rest.pop())
+        st = dict(s, selected=list(sel))
+        tk = game.action_key(dict(teacher, cards=sel, targets=sel) if t in ("use", "pick") else dict(teacher, cards=sel))
+        ex = _raw_example(st, lambda a: game.action_key(a) == tk, rng)
+        return out + [ex] if ex else []
+    tk = game.action_key(teacher)
+    ex = _raw_example(s, lambda a: game.action_key(a) == tk, rng)
+    return [ex] if ex else []
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--shards", default="0-19")
@@ -210,14 +249,19 @@ def main():
                     if got[s["phase"]] >= share[s["phase"]] * args.per_shard:
                         continue
                     a = dec.action(r["action"], s)
-                    ex = make_example(s, a, rng) if a else None
+                    if game.RAW:
+                        exs = raw_examples(s, a, rng) if a else []
+                    else:
+                        exs = [make_example(s, a, rng)] if a else []
                 except (IndexError, KeyError, ValueError):
-                    ex = None
-                if ex is None:
+                    exs = []
+                exs = [e for e in exs if e]
+                if not exs:
                     n_skip += 1
                     continue
-                ex.update(seed=r["seed"], step=r["step"], won=r["won"], ret=r["return_target"])
-                f.write(json.dumps(ex, ensure_ascii=False) + "\n")
+                for ex in exs:
+                    ex.update(seed=r["seed"], step=r["step"], won=r["won"], ret=r["return_target"])
+                    f.write(json.dumps(ex, ensure_ascii=False) + "\n")
                 got[s["phase"]] += 1
                 n_ok += 1
                 if sum(got.values()) >= args.per_shard:

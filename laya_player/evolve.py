@@ -101,9 +101,13 @@ def play_run(b: Bridge, pol, gen: int, run_id: str, args) -> dict:
     won = False
     busy = streak = 0
     tries: dict = {}
+    sel_ids: list = []  # raw mode: ids of hand cards clicked in this decision
+    deselects, clicked = 0, False
     dec_f = open(RUNS / "decisions" / f"{run_id}.jsonl", "w", encoding="utf8")
     for _ in range(args.max_decisions):
-        p = wait_stable(b)
+        if not clicked:  # a click changes nothing in the game, so the last payload is still current
+            p = wait_stable(b)
+        clicked = False
         ph = p.get("phase")
         max_ante = max(max_ante, p.get("ante") or 1)
         run_seed = p.get("seed") or run_seed
@@ -146,6 +150,11 @@ def play_run(b: Bridge, pol, gen: int, run_id: str, args) -> dict:
         if s is None:
             time.sleep(0.3)
             continue
+        if game.RAW and s.get("hand"):
+            ids = [c.get("id") for c in s["hand"]]
+            sel_ids = [x for x in sel_ids if x in ids]
+            s["selected"] = [ids.index(x) for x in sel_ids]
+            s["sel_budget"] = game.SELECT_BUDGET - deselects
         cands = live_candidates(s)
         txt = game.state_text(s)
         repeat = repeat + 1 if txt == last_txt else 0
@@ -166,6 +175,26 @@ def play_run(b: Bridge, pol, gen: int, run_id: str, args) -> dict:
         idx, probs = pol.choose(s["phase"], txt, opts, temperature=args.temperature,
                                 greedy=getattr(args, "greedy", False))
         a = acts[idx]
+        if a["t"] in ("select", "deselect"):
+            cid = s["hand"][a["card"]].get("id")
+            if a["t"] == "select":
+                sel_ids.append(cid)
+            else:
+                sel_ids.remove(cid)
+                deselects += 1
+            try:  # mirror the click on screen; the selection itself lives here
+                b.call("select_hand_cards", {"card_ids": list(sel_ids)})
+            except BridgeError:
+                pass
+            clicked = True
+            d = {"gen": gen, "run": run_id, "step": len(decisions), "round": round_idx, "phase": s["phase"],
+                 "ante": s.get("ante"), "state": txt, "options": opts, "label": idx, "probs": probs,
+                 "round_won": False}
+            decisions.append(d)
+            dec_f.write(json.dumps(d, ensure_ascii=False) + "\n")
+            log(f"[g{gen} a{s['ante']} {s['phase']}] -> {opts[idx]} (p={probs[idx]:.2f})")
+            continue
+        sel_ids, deselects = [], 0
         try:
             res = execute(b, s, a)
             if a["t"] == "play" and isinstance(res, dict):

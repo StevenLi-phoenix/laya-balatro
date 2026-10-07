@@ -1,0 +1,116 @@
+22:17:13 init ckpt/rich_init.pt: val 7.50 rounds over 64 seeds (200s)
+22:26:15 iter 1: train 6.69 val 6.48 (best 7.50) wins 0 | 2391 dec, play 137s train 238s val 167s
+22:35:18 iter 2: train 6.00 val 7.28 (best 7.50) wins 0 | 2097 dec, play 138s train 219s val 187s
+22:44:25 iter 3: train 6.60 val 6.47 (best 7.50) wins 0 | 2346 dec, play 133s train 235s val 179s
+22:53:38 iter 4: train 6.10 val 7.11 (best 7.50) wins 0 | 2200 dec, play 139s train 227s val 187s
+23:03:51 iter 5: train 6.54 val 7.59 (best 7.59 NEW) wins 0 | 2552 dec, play 148s train 264s val 200s
+23:12:51 iter 6: train 4.42 val 8.16 (best 8.16 NEW) wins 0 | 1862 dec, play 107s train 184s val 248s
+23:23:18 iter 7: train 5.62 val 8.53 (best 8.53 NEW) wins 0 | 2318 dec, play 136s train 233s val 257s
+23:32:37 iter 8: train 4.50 val 7.78 (best 8.53) wins 0 | 2092 dec, play 125s train 221s val 213s
+23:40:16 iter 9: train 4.79 val 7.95 (best 8.53) wins 0 | 2051 dec, play 112s train 168s val 178s
+23:48:17 iter 10: train 4.83 val 8.62 (best 8.62 NEW) wins 0 | 2181 dec, play 99s train 182s val 199s
+23:56:29 iter 11: train 4.52 val 8.81 (best 8.81 NEW) wins 0 | 2218 dec, play 100s train 193s val 198s
+00:04:32 iter 12: train 4.98 val 8.25 (best 8.81) wins 0 | 2269 dec, play 104s train 193s val 185s
+00:12:10 iter 13: train 4.50 val 8.84 (best 8.84 NEW) wins 0 | 2042 dec, play 89s train 172s val 197s
+00:18:59 iter 14: train 3.44 val 8.39 (best 8.84) wins 0 | 1771 dec, play 76s train 143s val 190s
+00:25:22 iter 15: train 3.31 val 7.70 (best 8.84) wins 0 | 1588 dec, play 71s train 134s val 177s
+00:31:38 iter 16: train 3.25 val 7.94 (best 8.84) wins 0 | 1617 dec, play 76s train 135s val 165s
+00:38:18 iter 17: train 3.88 val 6.88 (best 8.84) wins 0 | 1884 dec, play 85s train 156s val 160s
+00:45:41 iter 18: train 4.44 val 7.94 (best 8.84) wins 0 | 2065 dec, play 94s train 172s val 177s
+00:52:53 iter 19: train 4.25 val 8.06 (best 8.84) wins 0 | 1914 dec, play 94s train 162s val 176s
+00:59:57 iter 20: train 4.50 val 8.33 (best 8.84) wins 0 | 1998 dec, play 86s train 164s val 174s
+01:07:18 iter 21: train 4.67 val 7.72 (best 8.84) wins 0 | 2029 dec, play 95s train 176s val 170s
+01:14:02 iter 22: train 3.73 val 8.55 (best 8.84) wins 0 | 1729 dec, play 79s train 143s val 182s
+01:21:43 iter 23: train 4.08 val 8.41 (best 8.84) wins 0 | 1988 dec, play 92s train 170s val 199s
+01:29:43 iter 24: train 4.52 val 8.59 (best 8.84) wins 0 | 2150 dec, play 98s train 189s val 193s
+01:43:35 iter 25: train 3.96 val 8.50 (best 8.84) wins 0 | 1926 dec, play 88s train 173s val 251s
+01:52:32 iter 26: train 4.04 val 8.67 (best 8.84) wins 0 | 1817 dec, play 107s train 184s val 245s
+02:00:57 iter 27: train 3.48 val 8.30 (best 8.84) wins 0 | 1756 dec, play 101s train 173s val 231s
+02:10:24 iter 28: train 4.27 val 8.53 (best 8.84) wins 0 | 2004 dec, play 123s train 204s val 240s
+02:18:46 iter 29: train 3.27 val 8.53 (best 8.84) wins 0 | 1669 dec, play 100s train 164s val 237s
+02:28:06 iter 30: train 4.10 val 8.62 (best 8.84) wins 0 | 1999 dec, play 115s train 197s val 248s
+02:38:49 iter 31: train 3.79 val 8.34 (best 8.84) wins 0 | 1862 dec, play 112s train 220s val 310s
+02:48:54 iter 32: train 4.42 val 8.66 (best 8.84) wins 0 | 1953 dec, play 132s train 222s val 250s
+02:57:24 iter 33: train 3.92 val 7.39 (best 8.84) wins 0 | 1947 dec, play 110s train 188s val 213s
+03:05:14 iter 34: train 3.71 val 7.58 (best 8.84) wins 0 | 1813 dec, play 109s train 180s val 180s
+03:14:47 iter 35: train 4.69 val 7.78 (best 8.84) wins 0 | 2107 dec, play 119s train 206s val 247s
+03:24:20 init D:\Documents\Codes\balatro-gameplay\laya-player\ckpt_sim\sim0013.pt: val 8.89 rounds over 64 seeds (232s)
+03:32:23 iter 36: train 3.98 val 8.72 (best 8.89) wins 0 | 1778 dec, play 94s train 162s val 228s
+03:41:46 iter 37: train 4.35 val 7.64 (best 8.89) wins 0 | 2042 dec, play 114s train 203s val 245s
+03:49:55 iter 38: train 3.65 val 8.22 (best 8.89) wins 0 | 1757 dec, play 96s train 176s val 218s
+03:59:23 iter 39: train 4.29 val 8.08 (best 8.89) wins 0 | 1939 dec, play 122s train 194s val 252s
+04:08:52 iter 40: train 4.58 val 8.25 (best 8.89) wins 0 | 2060 dec, play 119s train 207s val 243s
+04:18:48 iter 41: train 4.69 val 8.20 (best 8.89) wins 0 | 2101 dec, play 123s train 208s val 265s
+04:26:43 iter 42: train 3.25 val 8.41 (best 8.89) wins 0 | 1659 dec, play 97s train 162s val 215s
+04:35:26 iter 43: train 3.54 val 8.14 (best 8.89) wins 0 | 1750 dec, play 99s train 172s val 251s
+04:43:37 iter 44: train 3.23 val 8.23 (best 8.89) wins 0 | 1672 dec, play 96s train 169s val 225s
+04:51:38 iter 45: train 3.60 val 7.64 (best 8.89) wins 0 | 1732 dec, play 91s train 164s val 225s
+05:00:37 iter 46: train 4.31 val 7.89 (best 8.89) wins 0 | 2011 dec, play 121s train 201s val 217s
+05:09:30 iter 47: train 3.67 val 8.78 (best 8.89) wins 0 | 1747 dec, play 104s train 174s val 254s
+05:18:42 iter 48: train 4.29 val 8.30 (best 8.89) wins 0 | 2015 dec, play 114s train 199s val 240s
+05:26:18 iter 49: train 3.29 val 7.66 (best 8.89) wins 0 | 1652 dec, play 94s train 160s val 201s
+05:34:45 iter 50: train 4.29 val 7.23 (best 8.89) wins 0 | 1933 dec, play 106s train 197s val 204s
+05:43:55 iter 51: train 4.92 val 7.16 (best 8.89) wins 0 | 2168 dec, play 121s train 219s val 209s
+05:52:58 iter 52: train 4.58 val 7.61 (best 8.89) wins 0 | 2089 dec, play 120s train 209s val 214s
+06:01:35 iter 53: train 3.58 val 8.92 (best 8.92 NEW) wins 0 | 1709 dec, play 95s train 170s val 251s
+06:09:27 iter 54: train 3.31 val 8.30 (best 8.92) wins 0 | 1661 dec, play 89s train 158s val 225s
+06:18:33 iter 55: train 3.96 val 8.47 (best 8.92) wins 0 | 1978 dec, play 113s train 204s val 229s
+06:27:02 iter 56: train 3.62 val 8.23 (best 8.92) wins 0 | 1807 dec, play 99s train 180s val 229s
+06:34:46 iter 57: train 3.33 val 7.94 (best 8.92) wins 0 | 1727 dec, play 96s train 172s val 195s
+06:42:15 iter 58: train 2.75 val 8.28 (best 8.92) wins 0 | 1509 dec, play 78s train 144s val 227s
+06:51:23 iter 59: train 4.15 val 8.47 (best 8.92) wins 0 | 1992 dec, play 122s train 195s val 230s
+07:00:28 iter 60: train 4.62 val 7.50 (best 8.92) wins 0 | 2072 dec, play 115s train 204s val 226s
+07:09:02 iter 61: train 3.46 val 8.39 (best 8.92) wins 0 | 1803 dec, play 95s train 177s val 242s
+07:17:35 iter 62: train 3.69 val 8.11 (best 8.92) wins 0 | 1833 dec, play 103s train 182s val 227s
+07:25:33 iter 63: train 3.58 val 7.52 (best 8.92) wins 0 | 1755 dec, play 95s train 168s val 215s
+07:33:08 iter 64: train 2.96 val 6.61 (best 8.92) wins 0 | 1590 dec, play 89s train 154s val 212s
+07:41:57 iter 65: train 3.42 val 8.58 (best 8.92) wins 0 | 1796 dec, play 103s train 179s val 247s
+07:50:26 iter 66: train 3.96 val 8.20 (best 8.92) wins 0 | 1841 dec, play 103s train 180s val 225s
+07:58:40 iter 67: train 3.62 val 8.58 (best 8.92) wins 0 | 1722 dec, play 96s train 170s val 229s
+08:12:07 iter 68: train 3.23 val 8.80 (best 8.92) wins 0 | 1639 dec, play 92s train 163s val 552s
+08:25:45 iter 69: train 3.38 val 8.59 (best 8.92) wins 0 | 1593 dec, play 212s train 364s val 241s
+08:34:50 iter 70: train 3.92 val 8.55 (best 8.92) wins 0 | 1860 dec, play 107s train 179s val 259s
+08:43:46 iter 71: train 3.42 val 8.91 (best 8.92) wins 0 | 1814 dec, play 94s train 174s val 267s
+08:52:13 iter 72: train 3.48 val 8.27 (best 8.92) wins 0 | 1714 dec, play 95s train 170s val 241s
+08:59:57 iter 73: train 3.79 val 8.19 (best 8.92) wins 0 | 1775 dec, play 98s train 171s val 195s
+09:08:12 iter 74: train 3.31 val 8.42 (best 8.92) wins 0 | 1640 dec, play 94s train 158s val 243s
+09:16:35 iter 75: train 3.54 val 8.77 (best 8.92) wins 0 | 1720 dec, play 98s train 166s val 239s
+09:25:47 iter 76: train 4.02 val 8.09 (best 8.92) wins 0 | 1994 dec, play 111s train 197s val 243s
+09:34:23 iter 77: train 3.79 val 8.30 (best 8.92) wins 0 | 1823 dec, play 106s train 175s val 235s
+09:42:33 iter 78: train 3.48 val 7.39 (best 8.92) wins 0 | 1786 dec, play 105s train 174s val 210s
+09:50:36 iter 79: train 2.94 val 8.38 (best 8.92) wins 0 | 1578 dec, play 85s train 153s val 245s
+09:59:13 iter 80: train 3.25 val 8.80 (best 8.92) wins 0 | 1623 dec, play 91s train 156s val 270s
+10:08:57 iter 81: train 4.58 val 8.62 (best 8.92) wins 0 | 2159 dec, play 127s train 218s val 238s
+10:17:41 iter 82: train 3.27 val 8.50 (best 8.92) wins 0 | 1697 dec, play 95s train 166s val 263s
+10:25:54 iter 83: train 3.00 val 8.66 (best 8.92) wins 0 | 1562 dec, play 83s train 146s val 263s
+10:34:41 iter 84: train 3.85 val 8.02 (best 8.92) wins 0 | 1889 dec, play 114s train 186s val 227s
+10:43:56 iter 85: train 3.85 val 8.89 (best 8.92) wins 0 | 1827 dec, play 105s train 180s val 269s
+10:56:41 init D:\Documents\Codes\balatro-gameplay\laya-player\ckpt_sim\sim0053.pt: val 9.01 rounds over 128 seeds (475s)
+11:12:38 iter 86: train 6.88 val 8.53 (best 9.01) wins 0 | 2631 dec, play 176s train 281s val 499s
+11:26:18 iter 87: train 4.04 val 8.66 (best 9.01) wins 0 | 1911 dec, play 111s train 192s val 516s
+11:40:59 iter 88: train 4.73 val 8.55 (best 9.01) wins 0 | 1996 dec, play 120s train 202s val 557s
+12:07:18 iter 89: train 5.02 val 8.74 (best 9.01) wins 0 | 1995 dec, play 210s train 827s val 541s
+12:20:08 iter 90: train 4.38 val 8.59 (best 9.01) wins 0 | 1987 dec, play 115s train 197s val 457s
+12:33:04 iter 91: train 4.90 val 8.24 (best 9.01) wins 0 | 2108 dec, play 120s train 209s val 447s
+12:47:37 iter 92: train 4.79 val 7.84 (best 9.01 rollback) wins 0 | 1863 dec, play 113s train 188s val 570s
+13:20:50 iter 93: train 5.40 val 8.67 (best 9.01) wins 0 | 2251 dec, play 543s train 895s val 555s
+13:34:38 iter 94: train 4.15 val 8.18 (best 9.01) wins 0 | 1816 dec, play 110s train 185s val 532s
+14:05:22 iter 95: train 3.65 val 8.44 (best 9.01) wins 0 | 1694 dec, play 97s train 166s val 1580s
+14:53:05 iter 96: train 4.58 val 8.69 (best 9.01) wins 0 | 2093 dec, play 610s train 1674s val 579s
+15:05:23 imit: start from sim0053.pt (val 9.01); teacher agreement 0.771; 158000 train examples
+15:51:14 imit 1: 20000 examples, agreement 0.802 (hand 0.835 shop 0.685) val 8.95 (best 9.01) | train 1817s val 934s
+16:30:24 imit 2: 40000 examples, agreement 0.81 (hand 0.833 shop 0.724) val 7.87 (best 9.01) | train 1818s val 532s
+17:10:24 imit 3: 60000 examples, agreement 0.828 (hand 0.843 shop 0.758) val 7.95 (best 9.01) | train 1817s val 582s
+18:07:45 imit 4: 80000 examples, agreement 0.833 (hand 0.844 shop 0.783) val 8.10 (best 9.01) | train 1818s val 1623s
+20:18:56 imit: start from imit04.pt (best 9.01); teacher agreement 0.833; 158000 train examples
+20:57:34 imit 5: 100000 examples, agreement 0.839 (hand 0.857 shop 0.783) val 8.34 (best 9.01) | train 1783s val 535s
+21:36:54 imit 6: 120000 examples, agreement 0.845 (hand 0.86 shop 0.795) val 8.05 (best 9.01) | train 1819s val 541s
+22:17:20 imit 7: 140000 examples, agreement 0.843 (hand 0.854 shop 0.801) val 7.97 (best 9.01) | train 1875s val 552s
+22:52:31 imit 8: 160000 examples, agreement 0.842 (hand 0.85 shop 0.809) val 6.99 (best 9.01) | train 1646s val 465s
+23:19:26 iter 97: train 5.95 val 8.62 (best 9.01) wins 0 | 6306 dec, play 371s train 633s val 504s
+23:41:23 iter 98: train 4.54 val 8.15 (best 9.01) wins 0 | 5324 dec, play 303s train 533s val 480s
+00:11:16 iter 99: challenger 7.94 vs champion 8.00 on 64 fresh seeds
+00:11:16 iter 99: train 5.31 val 9.02 (best 9.01) wins 0 | 5778 dec, play 344s train 414s val 500s
+00:31:34 iter 100: train 4.66 val 8.98 (best 9.01) wins 0 | 5263 dec, play 321s train 376s val 519s
+00:58:34 iter 101: challenger 7.86 vs champion 8.31 on 64 fresh seeds
+00:58:35 iter 101: train 4.52 val 9.21 (best 9.01) wins 0 | 5109 dec, play 310s train 360s val 555s

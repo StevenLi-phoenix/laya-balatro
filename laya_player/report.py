@@ -13,6 +13,7 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
+import matplotlib.ticker  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "reports"
@@ -64,8 +65,10 @@ def imitation(log: str) -> list[tuple]:
     return pts
 
 
-def real(rt: list[dict], ck: str) -> dict:
+def real(rt: list[dict], ck: str, png: str = "real_game.png") -> dict | None:
     rs = [r for r in rt if r["ckpt"] == ck and r["real_outcome"] in ("won", "lost")]
+    if not rs:
+        return None
     fig, (a, b) = plt.subplots(1, 2, figsize=(10, 3.8))
     a.hist([r["real_rounds"] for r in rs], bins=range(0, 20), color="#4a7bd0", edgecolor="white")
     a.set(xlabel="rounds won", ylabel="runs", title=f"Real Balatro, {ck}, {len(rs)} random seeds")
@@ -76,36 +79,133 @@ def real(rt: list[dict], ck: str) -> dict:
     b.set(xlabel="real game rounds", ylabel="simulator rounds (same seed)",
           title=f"Sim/real twin runs: {same}/{len(m)} identical")
     fig.tight_layout()
-    fig.savefig(OUT / "real_game.png", dpi=130)
+    fig.savefig(OUT / png, dpi=130)
     return {"runs": len(rs), "mean": st.mean(r["real_rounds"] for r in rs), "best": max(r["real_rounds"] for r in rs),
             "ante": st.mean(r["real_ante"] for r in rs), "wins": sum(r["real_outcome"] == "won" for r in rs),
             "same": same, "twins": len(m)}
 
 
-def main():
-    OUT.mkdir(exist_ok=True)
-    its = rows(ROOT / "runs_sim" / "iters.jsonl")
-    log = (ROOT / "runs_sim" / "simloop.log").read_text(encoding="utf8")
-    champ = json.loads((ROOT / "runs_sim" / "state.json").read_text())
+def _setting_changes(its: list[dict]) -> list[tuple[float, str]]:
+    """Restarts with new settings (runs/stage2_n8.log) -> (x between iterations, short label)."""
+    log = ROOT / "runs" / "stage2_n8.log"
+    times = {}
+    for l in (ROOT / "runs_sim" / "simloop.log").read_text(encoding="utf8").splitlines():
+        m = re.match(r"(\d\d:\d\d:\d\d) iter (\d+):", l)
+        if m:
+            times[int(m[2])] = m[1]
+    out, prev = [], {}
+    for l in (log.read_text(encoding="utf8").splitlines() if log.exists() else []):
+        m = re.match(r"(\d\d:\d\d:\d\d) simloop \(re\)started: (.*)", l)
+        if not m:
+            continue
+        args = dict(re.findall(r"--([\w-]+) (\S+)", m[2]))
+        diff = {k: v for k, v in args.items() if prev.get(k) != v}
+        prev = args
+        nxt = [i for i, t in sorted(times.items()) if t > m[1]]
+        if nxt and diff:
+            short = {"batch": "batch", "lr": "lr", "games": "games", "test-games": "test", "temperature": "T",
+                     "epochs": "PPO clip, epochs", "group": "same-seed credit, group"}
+            out.append((nxt[0] - 0.5, ", ".join(f"{short.get(k, k)} {v}" for k, v in diff.items())))
+    return out
+
+
+def rl_curve(its: list[dict]) -> None:
+    """Stage 2 in the Stage 1 chart style. Seeds are fresh every iteration, so the champion line is the running
+    mean of every head-to-head score the reigning champion has posted."""
+    fig, ax = plt.subplots(figsize=(10, 4.2))
+    x = [r["iter"] for r in its]
+    ax.scatter(x, [r["test_rounds"] for r in its], s=14, c="#4a7bd0", label="new weights, greedy (fresh seeds)")
+    ax.scatter(x, [r["train_rounds"] for r in its], s=8, c="#bbbbbb", label="self-play games (sampled)")
+    scores: dict[str, list[float]] = {}
+    before, line = "raw_init.pt", []
+    for r in its:
+        scores.setdefault(before, []).append(r["champion_rounds"])
+        if r["champion"] != before:
+            scores.setdefault(r["champion"], []).append(r["test_rounds"])
+        before = r["champion"]
+        line.append(st.mean(scores[before]))
+    ax.step(x, line, where="post", c="#d04a4a", lw=1.5, label="champion (mean of its head-to-heads)")
+    base = st.mean(scores.get("raw_init.pt", [0]))
+    ax.axhline(base, c="#888", lw=0.8, ls="--")
+    ax.text(x[0], base - 0.45, f"raw_init (kickoff imitation) {base:.2f}", fontsize=8, color="#666")
+    ax.axhline(9.01, c="#d9a0a0", lw=0.8, ls="--")
+    ax.text(x[0], 9.1, "Stage 1 champion sim0053 9.01 (combo actions, fixed seeds)", fontsize=8, color="#b07070")
+    top = max(9.5, max(r["test_rounds"] for r in its) + 0.8)
+    for at, txt in _setting_changes(its):
+        ax.axvline(at, c="k", ls=":", lw=0.8)
+        ax.text(at - 0.15, 0.3, txt, fontsize=7, ha="right", rotation=90, va="bottom")
+    ax.set(xlabel="iteration", ylabel="rounds won per run", ylim=(0, top),
+           title="Stage 2: Laya clicks (raw actions), pure RL in the jackdaw simulator (Red Deck / White Stake)")
+    ax.xaxis.set_major_locator(matplotlib.ticker.MaxNLocator(integer=True))
+    ax.legend(loc="upper right", fontsize=8)
+    fig.tight_layout()
+    fig.savefig(OUT / "stage2_rl.png", dpi=130)
+
+
+def stage1(rt: list[dict]) -> list[str]:
+    base = ROOT / "runs_sim_v2_combo"
+    its = rows(base / "iters.jsonl")
+    log = (base / "simloop.log").read_text(encoding="utf8")
+    champ = json.loads((base / "state.json").read_text())
     sim_curve(its, champ["best"])
     imit = imitation(log)
     ck = Path(champ["champion"]).name
-    r = real(rows(ROOT / "runs" / "real_test.jsonl"), ck)
+    r = real(rt, ck)
     chal = [(int(m[1]), float(m[2]), float(m[3])) for m in CHAL.finditer(log)]
-    md = [f"# Laya plays Balatro: results\n",
-          f"Champion: **{ck}**, simulator validation {champ['best']:.2f} rounds over {champ['val_games']} fixed seeds "
+    md = ["## Stage 1 (v1.0): pre-built candidate moves\n",
+          f"Champion **{ck}**: simulator validation {champ['best']:.2f} rounds over {champ['val_games']} fixed seeds "
           f"after {champ['iter']} self-play iterations.\n",
-          "## Real game (test set)\n",
-          f"{r['runs']} runs on random seeds: mean {r['mean']:.2f} rounds won, best {r['best']}, mean max ante "
-          f"{r['ante']:.1f}, {r['wins']} wins. The simulator replay of the same seed matched the real round count in "
-          f"{r['same']}/{r['twins']} runs.\n", "![real](real_game.png)\n",
-          "## Simulator self-play\n", "![sim](sim_training.png)\n",
+          f"Real game: {r['runs']} runs on random seeds, mean {r['mean']:.2f} rounds won, best {r['best']}, mean max "
+          f"ante {r['ante']:.1f}, {r['wins']} wins; simulator replay of the same seed matched in "
+          f"{r['same']}/{r['twins']} runs.\n", "![real](real_game.png)\n", "![sim](sim_training.png)\n",
           "Head-to-head checks (challenger beat the champion on the validation seeds, then both played 64 fresh seeds):\n",
           "| iter | challenger | champion |", "|---|---|---|"]
     md += [f"| {i} | {a:.2f} | {c:.2f} |" for i, a, c in chal]
-    md += ["\n## Imitation of the HF teacher (V68 heuristic, 74.6% win rate in Pylatro)\n", "![imit](imitation.png)\n",
+    md += ["\nImitation of the HF teacher (V68 heuristic, 74.6% win rate in Pylatro):\n", "![imit](imitation.png)\n",
            "| chunk | decisions | agreement | sim val |", "|---|---|---|---|"]
     md += [f"| {k} | {n} | {a:.1%} | {v:.2f} |" for k, n, a, v in imit]
+    return md
+
+
+def stage2(rt: list[dict]) -> list[str]:
+    its = rows(ROOT / "runs_sim" / "iters.jsonl")
+    ev = ROOT / "runs" / "raw_init_eval.json"
+    md = ["## Stage 2 (v1.1+): raw clicks, pure RL\n",
+          "Laya clicks like a player (`select K♥` ... `play selected`): one choice question per click, several "
+          "clicks per decision, no pre-built combinations, hand labels or score estimates. The HF teacher is used "
+          "once (kickoff imitation from sim0053); afterwards training is pure RL in the simulator on random seeds. "
+          "Each iteration the new weights and the champion play the same fresh random seeds; a paired t >= 1 win "
+          "takes the title. Real Balatro validates the champion on random seeds.\n"]
+    if ev.exists():
+        e = json.loads(ev.read_text())
+        md.append(f"Kickoff (teacher clicks, held-out games): agreement {e['before']['all']:.1%} before -> "
+                  f"**{e['after']['all']:.1%}** after (hand {e['after'].get('hand', 0):.1%}, "
+                  f"shop {e['after'].get('shop', 0):.1%}, pack {e['after'].get('pack', 0):.1%}).\n")
+    if its:
+        rl_curve(its)
+        last = its[-1]
+        md += [f"RL: {len(its)} iterations, champion **{last['champion']}**.\n", "![rl](stage2_rl.png)\n",
+               "| iter | train | new weights | champion | paired t | champion after |", "|---|---|---|---|---|---|"]
+        md += [f"| {r['iter']} | {r['train_rounds']:.2f} | {r['test_rounds']:.2f} | {r['champion_rounds']:.2f} | "
+               f"{r['t']:+.1f} | {r['champion']} |" for r in its[-15:]]
+    cks = list(dict.fromkeys(r["ckpt"] for r in rt if r["ckpt"].startswith("raw")))
+    if cks:
+        md += ["\nReal Balatro validation:\n", "| checkpoint | runs | mean rounds | best | mean ante | wins | sim twin identical |",
+               "|---|---|---|---|---|---|---|"]
+        for ck in cks:
+            r = real(rt, ck, "stage2_real.png")
+            if r:
+                md.append(f"| {ck} | {r['runs']} | {r['mean']:.2f} | {r['best']} | {r['ante']:.1f} | {r['wins']} | "
+                          f"{r['same']}/{r['twins']} |")
+        md.append("\n![real2](stage2_real.png)\n")
+    return md
+
+
+def main():
+    OUT.mkdir(exist_ok=True)
+    rt = rows(ROOT / "runs" / "real_test.jsonl")
+    ver = (ROOT / "VERSION").read_text().strip() if (ROOT / "VERSION").exists() else "?"
+    md = [f"# Laya plays Balatro: results (v{ver})\n"] + stage2(rt) + stage1(rt)
     (OUT / "REPORT.md").write_text("\n".join(md) + "\n", encoding="utf8")
     print("\n".join(md))
 

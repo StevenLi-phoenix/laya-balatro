@@ -18,3 +18,9 @@ runs_sim/*.txt
 runs_sim/state.json
 runs/video/*.raw.mp4
 runs/video/*.txt
+ckpt_sim_v2_combo/
+runs/video/
+runs/remote_sync*.txt
+runs/stage2_*.txt
+runs/convert_*.txt
+runs_sim_v2_combo/*.txt

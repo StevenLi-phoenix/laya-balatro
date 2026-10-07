@@ -1,0 +1,10 @@
+01:53:45 convert start (20 shards in parallel)
+01:54:12 convert done: 95642 click examples
+01:54:12 kickoff start
+02:16:59 kickoff done: raw_init.pt heldout teacher-agreement: {'hand': 0.712, 'shop': 0.66, 'pack': 0.833, 'blind': 1.0, 'all': 0.72}
+02:16:59 simloop start
+02:31:40 simloop (re)started: --batch 32 --lr 6e-6
+02:39:19 simloop (re)started: --batch 32 --lr 6e-6 --games 128 --test-games 128 --temperature 0.4
+02:50:08 simloop (re)started: --batch 32 --lr 3e-6 --games 128 --test-games 128 --temperature 0.4
+03:02:02 simloop (re)started: --batch 32 --lr 3e-6 --games 128 --test-games 128 --temperature 0.4 --epochs 2
+03:17:24 simloop (re)started: --batch 32 --lr 3e-6 --games 128 --test-games 128 --temperature 0.4 --epochs 2 --group 4 --credit seed

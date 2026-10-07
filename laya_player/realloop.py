@@ -2,7 +2,8 @@
 
 Runs cycle through fixed test seeds so real scores stay comparable across checkpoints, and
 each seed is also played in the simulator by the same weights (sim/real fidelity check).
-Inference runs on CPU so the GPU stays with simulator training.
+Inference uses the local GPU when there is one (training runs on a separate box); pass --device cpu
+when simulator training shares this GPU.
 
   python -m laya_player.realloop
 """
@@ -50,9 +51,9 @@ def report() -> str:
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--default", default=str(ROOT / "ckpt" / "gen14.pt"))
+    ap.add_argument("--default", default=str(ROOT / "ckpt" / "raw_init.pt"))
     ap.add_argument("--temperature", type=float, default=0.3)
-    ap.add_argument("--device", default="cpu")
+    ap.add_argument("--device", default="cuda" if __import__("torch").cuda.is_available() else "cpu")
     ap.add_argument("--fixed-seeds", action="store_true", help="cycle TEST_SEEDS instead of random runs")
     args = ap.parse_args()
     from .policy import Policy
@@ -61,6 +62,9 @@ def main():
     done = [json.loads(l) for l in open(OUT, encoding="utf8")] if OUT.exists() else []
     i = len(done)
     ck = champion(args.default)
+    while not Path(ck).exists():  # training runs remotely: wait for remote_sync to bring the first champion
+        time.sleep(60)
+        ck = champion(args.default)
     pol = Policy(ck, device=args.device)
     evolve.log(f"realloop: playing with {Path(ck).name} on {args.device}")
     b = Bridge()

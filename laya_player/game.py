@@ -13,12 +13,22 @@ Canonical state:
   levels: {hand_name: [level, chips, mult]}
   shop: [{kind, key, cost}]  kind: joker|tarot|planet|spectral|voucher|booster|card
   pack: [{kind, key} | {kind:"card", card:{...}}], pack_picks
+  selected: [hand idx], sel_budget                    (raw mode: cards picked so far this decision)
 Actions: {"t": select_blind|skip_blind|play|discard|use|buy|reroll|sell_joker|leave|pick|skip_pack, ...}
+
+Two action interfaces (LAYA_ACTIONS env var):
+  raw (default)  Laya clicks like a player: "select K♥" ... "play selected". One choice question per
+                 click, several calls per decision; no combinations, hand labels or score estimates.
+  combo          the original generator: pre-built plays/discards with hand type and ~score.
 """
 from __future__ import annotations
 
 import itertools
+import os
 from collections import Counter
+
+RAW = os.environ.get("LAYA_ACTIONS", "raw") == "raw"
+SELECT_BUDGET = 10  # deselects allowed per decision; afterwards a click can only add a card or commit
 
 RANKS = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"]
 RANK_VAL = {r: i + 2 for i, r in enumerate(RANKS)}
@@ -314,7 +324,75 @@ def consumable_candidates(state: dict, in_round: bool) -> list[dict]:
     return out
 
 
+MIN_TARGETS = {"c_death": 2}  # Death converts the left card into the right one
+
+
+def card_labels(hand: list[dict]) -> list[str]:
+    """Click label per hand card; position-tagged when two cards would read the same."""
+    names = ["face-down card" if c.get("hidden") else card_str(c) for c in hand]
+    dup = Counter(names)
+    return [f"{n} #{i + 1}" if dup[n] > 1 else n for i, n in enumerate(names)]
+
+
+def _clicks(state: dict) -> list[dict]:
+    sel = state.get("selected", [])
+    out = []
+    for i in range(len(state.get("hand", []))):
+        if i in sel:
+            if state.get("sel_budget", SELECT_BUDGET) > 0:
+                out.append({"t": "deselect", "card": i, "raw": True})
+        elif len(sel) < 5:
+            out.append({"t": "select", "card": i, "raw": True})
+    return out
+
+
+def _targets_ok(key: str, sel: list[int]) -> bool:
+    return MIN_TARGETS.get(key, 1) <= len(sel) <= TARGETS[key]
+
+
+def raw_candidates(state: dict) -> list[dict]:
+    """Primitive moves: click cards, then commit them. Shop and blind moves are already primitive."""
+    ph = state["phase"]
+    sel = list(state.get("selected", []))
+    if ph == "hand":
+        out = _clicks(state)
+        if sel and state.get("hands_left", 0) > 0:
+            out.append({"t": "play", "cards": sel, "raw": True})
+        if sel and state.get("discards_left", 0) > 0:
+            out.append({"t": "discard", "cards": sel, "raw": True})
+        for i, c in enumerate(state.get("consumables", [])):
+            key = c.get("key", "")
+            if key not in TARGETS:
+                out.append({"t": "use", "slot": i, "key": key, "raw": True})
+            elif _targets_ok(key, sel):
+                out.append({"t": "use", "slot": i, "key": key, "targets": sel, "raw": True})
+        return out
+    if ph == "pack":
+        out, needs_hand = [], False
+        for i, it in enumerate(state.get("pack", [])):
+            key = it.get("key", "")
+            if it["kind"] == "joker" and len(state.get("jokers", [])) >= state.get("joker_slots", 5):
+                continue
+            if key in TARGETS:
+                needs_hand = True
+                if state.get("hand") and _targets_ok(key, sel):
+                    out.append({"t": "pick", "slot": i, "item": it, "targets": sel, "raw": True})
+            else:
+                out.append({"t": "pick", "slot": i, "item": it, "raw": True})
+        if needs_hand and state.get("hand"):
+            out = _clicks(state) + out
+        out.append({"t": "skip_pack"})
+        return out
+    if ph == "shop":  # targeted consumables cannot be used without a hand
+        return [a for a in combo_candidates(state) if not a.get("targets")]
+    return combo_candidates(state)
+
+
 def candidates(state: dict) -> list[dict]:
+    return raw_candidates(state) if RAW else combo_candidates(state)
+
+
+def combo_candidates(state: dict) -> list[dict]:
     ph = state["phase"]
     if ph == "blind":
         out = [{"t": "select_blind"}]
@@ -373,6 +451,8 @@ def action_key(a: dict) -> tuple:
     t = a["t"]
     if t in ("play", "discard"):
         return (t, tuple(sorted(a["cards"])))
+    if t in ("select", "deselect"):
+        return (t, a["card"])
     if t in ("buy", "sell_joker", "pick"):
         return (t, a["slot"], tuple(sorted(a.get("targets", []))))
     if t == "use":
@@ -397,6 +477,17 @@ def action_text(state: dict, a: dict) -> str:
         return "play this blind"
     if t == "skip_blind":
         return "skip this blind for the tag"
+    if a.get("raw"):
+        from .desc import name_of
+        if t in ("select", "deselect"):
+            return f"{t} {card_labels(state['hand'])[a['card']]}"
+        if t in ("play", "discard"):
+            return f"{t} selected"
+        tg = " on selected" if a.get("targets") else ""
+        if t == "use":
+            return f"use {name_of(a['key'])}{tg}"
+        if t == "pick":
+            return f"take {item_str(a['item'])}{tg}"
     if t == "play":
         tag = " +kickers" if a.get("kick") else ""
         return f"play {a['hand']}{tag}: {_cards_txt(state, a['cards'])} (~{a['est']})"
@@ -448,6 +539,20 @@ def deck_text(s: dict) -> str:
     return f"deck {s.get('deck_left', '?')} cards left ({suits}; {ranks})"
 
 
+def selected_text(s: dict) -> str:
+    """What the game screen shows for the current selection: poker hand and its level chips x mult."""
+    sel = s.get("selected", [])
+    if not sel:
+        return "Selected (0/5): none"
+    cards = [s["hand"][i] for i in sel]
+    txt = f"Selected ({len(sel)}/5): " + " ".join(card_labels(s["hand"])[i] for i in sel)
+    if s["phase"] == "hand" and not any(c.get("hidden") for c in cards):
+        hand, _ = classify(cards)
+        chips, mult = level_stats(s, hand)
+        txt += f" = {hand} ({chips} x {mult})"
+    return txt
+
+
 def state_text(s: dict) -> str:
     """Full-information prompt: every effect the decision depends on, in words."""
     ph = s["phase"]
@@ -477,6 +582,8 @@ def state_text(s: dict) -> str:
                                                   for k, v in sorted(lv.items(), key=lambda x: -x[1][0])))
     if s.get("hand"):
         lines.append("Hand: " + " ".join(card_str(x) for x in s["hand"]))
+        if "selected" in s:
+            lines.append(selected_text(s))
         from .desc import card_legend
         leg = card_legend(s["hand"])
         if leg:
@@ -495,7 +602,11 @@ def state_text(s: dict) -> str:
 
 QUESTION = {
     "blind": "Balatro: play the upcoming blind or skip it for its tag?",
-    "hand": "Balatro: which play, discard or consumable gives the best chance to beat the blind and win the run?",
+    "hand": ("Balatro: which play, discard or consumable gives the best chance to beat the blind and win the run?"
+             if not RAW else
+             "Balatro: next click to beat the blind and win the run: select or deselect a card, play or "
+             "discard the selected cards, or use a consumable"),
     "shop": "Balatro shop: which purchase or action best improves the run?",
-    "pack": "Balatro booster pack: which card should be taken?",
+    "pack": ("Balatro booster pack: which card should be taken?" if not RAW else
+             "Balatro booster pack: which card should be taken (select hand cards first for cards that need targets)?"),
 }
