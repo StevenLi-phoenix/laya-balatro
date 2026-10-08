@@ -237,7 +237,7 @@ class Twin:
         return True
 
     def _repair(self, s: dict) -> bool:
-        """Take over from the real game what jackdaw draws differently and nothing else depends on.
+        """Take over from the real game what jackdaw computes differently and nothing else depends on.
         To Do List: the real game named another poker hand than jackdaw for the same purchase (real Four
         of a Kind, sim Straight Flush; first real run with notes to part); the hand only decides its $4."""
         fixed = False
@@ -247,6 +247,14 @@ class Twin:
                 if m and m[1] in game.HAND_BASE and j.ability.get("to_do_poker_hand") != m[1]:
                     j.ability["to_do_poker_hand"] = m[1]
                     fixed = True
+        b, gs = s.get("blind"), self.g.gs
+        if s.get("phase") == "hand" and b and isinstance(b.get("scored"), int):
+            # Float rounding of chips x mult: real 26089 vs sim 26090 at Big Blind 30000 (2026-10-08 02:20).
+            # Take the real round score when the two differ by at most 2.
+            mine = int(gs.get("chips", 0))
+            if mine != b["scored"] and abs(mine - b["scored"]) <= 2:
+                gs["chips"] = b["scored"]
+                fixed = True
         self.repairs += fixed
         return fixed
 
