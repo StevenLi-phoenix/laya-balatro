@@ -7,7 +7,7 @@ cd "$(dirname "$0")"
 export LAYA_ACTIONS=raw LAYA_CALC=1 PYTHONIOENCODING=utf-8 APPDATA="$PWD/profile"
 PY=.venv/bin/python
 note() { echo "$(date '+%F %T') $*" >> runs/stage3.log; }
-ARGS="--batch 32 --lr 3e-6 --games 256 --test-games 128 --temperature 0.5 --epochs 2 --group 4 --credit best"
+ARGS="--batch 32 --lr 3e-6 --games 256 --test-games 128 --temperature 0.5 --epochs 2 --group 4 --credit best --promote-t 2.0"
 
 if [ ! -f runs/ladder_calc.json ]; then  # zero-shot: raw0056 with the notes, on Stage 2's final ladder seeds
   note "zero-shot ladder start"
