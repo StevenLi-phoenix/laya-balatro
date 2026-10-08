@@ -25,7 +25,7 @@ def srt_time(s: float) -> str:
     return f"{ms // 3600000:02d}:{ms // 60000 % 60:02d}:{ms // 1000 % 60:02d},{ms % 1000:03d}"
 
 
-def build_srt(decisions: list[dict], t0: float, speed: float, out: Path) -> int:
+def build_srt(decisions: list[dict], t0: float, speed: float, out: Path, who: str = "Laya") -> int:
     """Captions from the decision records' millisecond timestamps (`ts`, when each move was sent).
     Within one decision the caption grows click by click and resets after the committing move,
     so captions never overlap."""
@@ -38,7 +38,7 @@ def build_srt(decisions: list[dict], t0: float, speed: float, out: Path) -> int:
         head = f"Ante {d['ante']} {d['phase']}" + (f"  {m[1]}/{m[2]}" if m and d["phase"] == "hand" else "")
         click = act.startswith(("select ", "deselect ", "cancel ")) or "(then choose" in act
         chain.append(f"{act} ({p:.2f})")
-        events.append(((d["ts"] - t0) / speed, f"{head}\nLaya: " + " · ".join(chain[-6:])))
+        events.append(((d["ts"] - t0) / speed, f"{head}\n{who}: " + " · ".join(chain[-6:])))
         if not click:
             chain = []
     with open(out, "w", encoding="utf8") as f:
@@ -84,6 +84,8 @@ def main():
     ap.add_argument("--out", default=str(ROOT / "runs" / "video" / "laya_balatro.mp4"))
     ap.add_argument("--device", default="cpu")
     ap.add_argument("--ckpt", default=None)
+    ap.add_argument("--api", default=None, help="a decisions-API model id (OpenRouter) playing instead of Laya")
+    ap.add_argument("--name", default=None, help="player name in captions and title")
     ap.add_argument("--capture-lag", type=float, default=0.5, help="seconds ffmpeg takes to deliver its first frame")
     args = ap.parse_args()
     from .policy import Policy
@@ -91,8 +93,13 @@ def main():
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     raw, srt = out.with_suffix(".raw.mp4"), out.with_suffix(".srt")
-    ck = args.ckpt or realloop.champion(str(ROOT / "ckpt" / "rich_init.pt"))
-    pol = Policy(ck, device=args.device)
+    if args.api:
+        from .apiplay import ApiPolicy
+        ck, pol = args.api, ApiPolicy(args.api)
+    else:
+        ck = args.ckpt or realloop.champion(str(ROOT / "ckpt" / "rich_init.pt"))
+        pol = Policy(ck, device=args.device)
+    who = args.name or ("Laya" if not args.api else args.api)
     try:
         b = Bridge(timeout=10)
     except OSError:
@@ -100,7 +107,7 @@ def main():
     (evolve.RUNS / "decisions").mkdir(parents=True, exist_ok=True)
     run_args = argparse.Namespace(fresh=True, deck="b_red", stake=1, seed=args.seed, max_decisions=10000,
                                   greedy=True, temperature=0.3)
-    run_id = f"video_{Path(ck).stem}_{args.seed}_{time.strftime('%m%d_%H%M%S')}"
+    run_id = f"video_{Path(ck).stem.replace('/', '_')}_{args.seed}_{time.strftime('%m%d_%H%M%S')}"
     with GameWindow() as win:
         x, y, w, h = win.region
         ff = subprocess.Popen(["ffmpeg", "-loglevel", "error", "-y", "-f", "lavfi", "-i",
@@ -115,9 +122,9 @@ def main():
         finally:
             ff.communicate(b"q", timeout=60)
     decisions = [json.loads(l) for l in open(evolve.RUNS / "decisions" / f"{run_id}.jsonl", encoding="utf8")]
-    n = build_srt(decisions, t0, args.speed, srt)
-    title = (f"Laya (421M ModernBERT decision model) plays Balatro - {Path(ck).stem}, seed {summary.get('seed')}, "
-             f"{args.speed:g}x speed").replace(":", r"\:").replace("'", "")
+    n = build_srt(decisions, t0, args.speed, srt, who)
+    title = ((f"Laya (421M ModernBERT decision model) plays Balatro - {Path(ck).stem}" if not args.api else
+              f"{who} plays Balatro") + f", seed {summary.get('seed')}, {args.speed:g}x speed").replace(":", r"\:").replace("'", "")
     # Windows ffmpeg builds have no fontconfig default: name the font file / folder explicitly
     # (without them drawtext crashes with an access violation).
     fonts = r"C\:/Windows/Fonts"
@@ -128,7 +135,8 @@ def main():
           f"BorderStyle=3,Outline=1,BackColour=&H90000000,MarginV=24'")
     subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-i", raw.name, "-vf", vf, "-r", "30", "-an",
                     "-c:v", "libx264", "-crf", "23", "-pix_fmt", "yuv420p", out.name], check=True, cwd=out.parent)
-    print(f"{out}: {summary['rounds_won']} rounds, ante {summary['max_ante']}, {summary['outcome']}; {n} subtitles")
+    print(f"{out}: {summary['rounds_won']} rounds, ante {summary['max_ante']}, {summary['outcome']}; {n} subtitles"
+          + (f"; API cost ${pol.cost:.4f}" if args.api else ""))
 
 
 if __name__ == "__main__":

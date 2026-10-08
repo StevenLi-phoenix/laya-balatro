@@ -1,0 +1,6 @@
+11:32:31 start raw0056.pt: 1246487 train clicks (4900 games), held-out agreement {'hand': 0.702, 'blind': 1.0, 'shop': 0.688, 'pack': 0.684, 'all': 0.708}; ladder raw0056 5.63
+12:01:23 chunk 1: 100000 clicks | agreement 0.762 (hand 0.754, shop 0.782) | ladder 4.48 (median 2.0) vs raw0056 -1.16, t -2.3 | wins 0 | train 1573s eval 159s
+12:30:30 chunk 2: 200000 clicks | agreement 0.773 (hand 0.766, shop 0.786) | ladder 4.74 (median 2.0) vs raw0056 -0.89, t -1.9 | wins 0 | train 1582s eval 166s
+12:59:19 chunk 3: 300000 clicks | agreement 0.797 (hand 0.794, shop 0.786) | ladder 4.08 (median 1.0) vs raw0056 -1.55, t -2.9 | wins 0 | train 1585s eval 145s
+13:28:10 chunk 4: 400000 clicks | agreement 0.804 (hand 0.802, shop 0.808) | ladder 4.02 (median 1.0) vs raw0056 -1.62, t -3.3 | wins 0 | train 1586s eval 144s
+13:57:27 chunk 5: 500000 clicks | agreement 0.811 (hand 0.809, shop 0.808) | ladder 4.89 (median 2.0) vs raw0056 -0.74, t -1.4 | wins 0 | train 1588s eval 169s

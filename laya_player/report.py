@@ -258,6 +258,62 @@ def stage3_curve() -> Path:
     return path
 
 
+def decision_models_chart(n: int = 64) -> Path:
+    """Every player on the same first n ladder seeds, greedy, in the simulator: one dot per seed + the mean.
+    Laya checkpoints in palette slot 1, hosted decision APIs in slot 2 (validated pair)."""
+    lad = json.loads((ROOT / "runs" / "ladder.json").read_text())
+    seeds = lad["seeds"][:n]
+    api = lambda f: {r["seed"]: r["rounds"] for r in rows(ROOT / "runs" / f)}
+    teach = {r["chunk"]: r for r in rows(ROOT / "runs_teach" / "teach.jsonl")}
+    last = teach[max(teach)]
+    s3 = json.loads((ROOT / "runs" / "ladder_raw0100_calc.json").read_text())["results"]["raw0100+calc"]["rounds"]
+    players = [  # (label, rounds per seed, is_api)
+        ("Laya raw_init\nteacher kickoff", lad["results"]["raw_init"]["rounds"][:n], False),
+        ("Laya raw0056\nStage 2, pure RL", lad["results"]["raw0056"]["rounds"][:n], False),
+        ("Laya raw0100\n+ computed notes\nStage 3", s3[:n], False),
+        (f"Laya + {last['clicks'] // 1000}k\nteacher clicks\nStage 4", last["ladder_games"][:n], False),
+        ("TypeSafe\nJev 1.13", [api("api_typesafe_jev-1.13.jsonl")[s] for s in seeds], True),
+        ("Jev 1.13\n+ computed notes", [api("api_typesafe_jev-1.13+calc.jsonl")[s] for s in seeds], True),
+        ("OpenAI GPT-6 Luna\nDecisions", [api("api_openai_gpt-6-luna-decisions.jsonl")[s] for s in seeds], True),
+    ]
+    ink, muted, laya_c, api_c = "#0b0b0b", "#52514e", "#2a78d6", "#eb6834"
+    fig, ax = plt.subplots(figsize=(11, 5.2))
+    fig.patch.set_facecolor("#fcfcfb")
+    ax.set_facecolor("#fcfcfb")
+    rng = random.Random(0)
+    for i, (label, r, is_api) in enumerate(players):
+        c = api_c if is_api else laya_c
+        ax.scatter([i + rng.uniform(-0.27, 0.27) for _ in r], r, s=16, color=c, alpha=0.55, lw=0, zorder=2)
+        m = st.mean(r)
+        ax.plot([i - 0.33, i + 0.33], [m, m], color=ink, lw=2, solid_capstyle="round", zorder=3)
+        ax.text(i + 0.36, m, f"{m:.2f}", color=ink, fontsize=9, va="center", ha="left")
+    dec = players[-1][1]
+    k = max(range(n), key=dec.__getitem__)
+    ax.annotate(f"{seeds[k]}: {dec[k]} rounds\n(Laya raw0056 {players[1][1][k]}, Jev {players[4][1][k]})",
+                xy=(len(players) - 1, dec[k]), xytext=(len(players) - 2.1, dec[k] + 4.5), fontsize=8.5, color=muted,
+                arrowprops=dict(arrowstyle="-", color=muted, lw=0.8))
+    ax.set_xticks(range(len(players)), [p[0] for p in players], fontsize=8.5, color=ink)
+    ax.set_ylabel("rounds won per run", color=muted)
+    ax.set_ylim(-0.8, max(max(p[1]) for p in players) + 3)
+    ax.set_xlim(-0.6, len(players) - 0.3)
+    ax.grid(axis="y", color="#e6e5e1", lw=0.8, zorder=0)
+    for side in ("top", "right"):
+        ax.spines[side].set_visible(False)
+    for side in ("left", "bottom"):
+        ax.spines[side].set_color("#c9c8c2")
+    ax.tick_params(colors=muted)
+    ax.set_title(f"Same {n} seeds, greedy, raw clicks, jackdaw simulator (Red Deck / White Stake): one dot per run, line = mean",
+                 fontsize=10.5, color=ink, loc="left")
+    from matplotlib.lines import Line2D
+    ax.legend(handles=[Line2D([], [], marker="o", ls="", color=laya_c, label="Laya (421M, trained here)"),
+                       Line2D([], [], marker="o", ls="", color=api_c, label="hosted decision API, zero-shot")],
+              loc="upper right", frameon=False, fontsize=9)
+    fig.tight_layout()
+    path = OUT / "decision_models.png"
+    fig.savefig(path, dpi=130, facecolor=fig.get_facecolor())
+    return path
+
+
 def stage1(rt: list[dict]) -> list[str]:
     base = ROOT / "runs_sim_v2_combo"
     its = rows(base / "iters.jsonl")

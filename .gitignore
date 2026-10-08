@@ -24,3 +24,4 @@ runs/remote_sync*.txt
 runs/stage2_*.txt
 runs/convert_*.txt
 runs_sim_v2_combo/*.txt
+.secrets/
