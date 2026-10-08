@@ -338,6 +338,29 @@ def _install_marble_fix() -> None:
 _install_marble_fix()
 
 
+def _install_saved_round_fix() -> None:
+    """A round Mr. Bones saves pays no blind reward: evaluate_round adds blind.dollars only when
+    chips >= blind.chips, else a 'saved' row worth $0 (state_events.lua). jackdaw paid it anyway, so a
+    twin saved on seed MWT4FTTL left the shop with $19 against the real $16."""
+    if getattr(engine, "_laya_saved_fix", False):
+        return
+    orig = engine._round_won
+
+    def wrapped(gs, *a, **kw):
+        out = orig(gs, *a, **kw)
+        e, b = gs.get("round_earnings"), gs.get("blind")
+        if e is not None and b is not None and gs.get("chips", 0) < getattr(b, "chips", 0) and e.blind_reward:
+            e.total -= e.blind_reward
+            e.blind_reward = 0
+        return out
+
+    engine._round_won = wrapped
+    engine._laya_saved_fix = True
+
+
+_install_saved_round_fix()
+
+
 # Boss forcing for sim/real twins. The real game (under Steamodded) draws the same 'boss'
 # pseudoseed as jackdaw yet shows a different boss; everything else (cards, tags, shops)
 # matches bit-for-bit. A twin replay therefore takes the bosses the real run showed.
