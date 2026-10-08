@@ -203,7 +203,7 @@ class Twin:
         self.g, self.ts, self.lost = SimGame(seed), None, None
         self.synced = self.calls = self.repairs = 0
         self.aligned = self.unaligned = 0  # hand states matched card-for-card by sort_id / left positional
-        self.undo = None  # state before the last move that touched face-down cards (see _redo_hidden)
+        self.chain: list[dict] = []  # moves since the first one that touched face-down cards (see _redo_hidden)
         self.hidden_fixes = 0
 
     def _align(self, s: dict, ts: dict) -> bool:
@@ -258,39 +258,77 @@ class Twin:
         self.repairs += fixed
         return fixed
 
+    LOCAL = ("selected", "sel_budget", "pending_pick", "pick_tries")  # click state the runner keeps
+    SEARCH_LIMIT = 4000  # moves simulated per repair at most
+
+    def _snap(self) -> bytes:
+        return pickle.dumps({k: v for k, v in self.g.__dict__.items() if k != "calc_cache"}, pickle.HIGHEST_PROTOCOL)
+
+    def _load(self, blob: bytes) -> None:
+        self.g.__dict__.update(pickle.loads(blob))
+        self.g.calc_cache = {}
+
+    def _now(self, local: dict) -> dict | None:
+        ts = self.g.pending()
+        if ts is not None:
+            ts.update(local)
+        return ts
+
     def _redo_hidden(self, s: dict) -> dict | None:
-        """The last move played or discarded face-down cards (The House, Wheel, Fish, Mark). Their real
-        identity is hidden from the runner (the mod sends session tokens), so the twin took the cards at
-        the same positions and the next prompt differs (2026-10-08 01:38, The House: score 2904 real vs
-        1664 sim). Redo the move from the saved state with every other choice of face-down cards and keep
-        the first one that renders the real prompt."""
-        blob, ts0, act = self.undo
-        hidden = [i for i, c in enumerate(ts0["hand"]) if c.get("hidden")]
-        chosen = [i for i in (act.get("cards") or act.get("targets") or []) if i in hidden]
-        others = [i for i in hidden if i not in chosen]
-        eng = [ts0["_hidx"][i] for i in hidden]
-        want = game.state_text(s)
-        for combo in itertools.combinations(eng, len(chosen)):
-            rest = [e for e in eng if e not in combo]
-            hidx = list(ts0["_hidx"])
-            for i, e in zip(chosen + others, list(combo) + rest):
-                hidx[i] = e
-            if hidx == ts0["_hidx"]:
-                continue  # the choice already made
-            self.g.__dict__.update(pickle.loads(blob))
-            alt = dict(ts0, _hidx=hidx)
-            if not self.g.apply(alt, act):
-                continue
-            ts = self.g.pending()
+        """Face-down cards (The House, Wheel, Fish, Mark) reach the runner as session tokens, so the twin
+        plays or discards the cards at the same positions and may take others than the real game
+        (2026-10-08 01:38, The House: score 2904 real vs 1664 sim). A wrong face-down discard shows
+        nothing until a later play (04:16, The House again), so the twin keeps every move since the first
+        one that touched face-down cards, with the real prompt seen after each, and searches the
+        face-down choices of all of them together; it keeps the first sequence that renders every real
+        prompt."""
+        steps, budget = self.chain, [self.SEARCH_LIMIT]
+        target = (game.state_text(s), {k: s[k] for k in self.LOCAL if k in s}, s["phase"])
+
+        def choices(ts: dict, act: dict, hidden_move: bool):
+            if not hidden_move:
+                yield ts["_hidx"]
+                return
+            hidden = [i for i, c in enumerate(ts["hand"]) if c.get("hidden")]
+            chosen = [i for i in (act.get("cards") or act.get("targets") or []) if i in hidden]
+            others = [i for i in hidden if i not in chosen]
+            eng = [ts["_hidx"][i] for i in hidden]
+            for combo in itertools.combinations(eng, len(chosen)):
+                hidx = list(ts["_hidx"])
+                for i, e in zip(chosen + others, list(combo) + [e for e in eng if e not in combo]):
+                    hidx[i] = e
+                yield hidx
+
+        def dfs(i: int, blob: bytes) -> dict | None:
+            st = steps[i]
+            self._load(blob)
+            ts = self._now(st["local"])
             if ts is None:
-                continue
-            for k in ("selected", "sel_budget", "pending_pick", "pick_tries"):
-                if k in s:
-                    ts[k] = s[k]
-            if ts["phase"] == s["phase"] and game.state_text(ts) == want:
-                self.hidden_fixes += 1
-                return ts
-        return None
+                return None
+            for hidx in list(choices(ts, st["act"], st["hidden"])):
+                if budget[0] <= 0:
+                    return None
+                budget[0] -= 1
+                self._load(blob)
+                if not self.g.apply(dict(ts, _hidx=hidx), st["act"]):
+                    continue
+                want_txt, want_local, want_phase = target if i == len(steps) - 1 else st["seen"]
+                nxt = self._now(want_local)
+                if nxt is None or nxt["phase"] != want_phase or game.state_text(nxt) != want_txt:
+                    continue
+                if i == len(steps) - 1:
+                    return nxt
+                found = dfs(i + 1, self._snap())
+                if found is not None:
+                    return found
+            return None
+
+        if not steps or any(st["seen"] is None for st in steps[:-1]):
+            return None
+        found = dfs(0, steps[0]["blob"])
+        if found is not None:
+            self.hidden_fixes += 1
+        return found
 
     def annotate(self, s: dict, cands: list[dict]) -> bool:
         if s.get("phase") == "hand":
@@ -314,12 +352,16 @@ class Twin:
                 ts[k] = s[k]
         self.g.selected = list(s.get("selected", []))
         a, b = game.state_text(s), game.state_text(ts)
-        if (a != b or ts["phase"] != s["phase"]) and self.undo is not None:
+        if (a != b or ts["phase"] != s["phase"]) and self.chain:
             fixed = self._redo_hidden(s)
             if fixed is not None:
                 ts, b = fixed, a
                 self.g.selected = list(s.get("selected", []))
-        self.undo = None
+        if self.chain and a == b and ts["phase"] == s["phase"]:
+            if self.chain[-1]["seen"] is None:  # the real prompt that followed the last move
+                self.chain[-1]["seen"] = (a, {k: s[k] for k in self.LOCAL if k in s}, s["phase"])
+            if s["phase"] != "hand" or not any(c.get("hidden") for c in s.get("hand", [])):
+                self.chain = []  # no face-down card left in hand: every choice so far is settled
         if a != b or ts["phase"] != s["phase"]:
             diff = next(((x, y) for x, y in zip(a.splitlines(), b.splitlines()) if x != y), (a[-80:], b[-80:]))
             self.lost = f"real {diff[0][:100]!r} vs sim {diff[1][:100]!r}"
@@ -340,10 +382,11 @@ class Twin:
         key = game.action_key(a)
         mine = next((x for x in game.candidates(self.ts) if game.action_key(x) == key), None)
         hand = self.ts.get("hand", [])
-        if mine is not None and any(hand[i].get("hidden") for i in (mine.get("cards") or mine.get("targets") or [])
-                                    if i < len(hand)):
-            keep = {k: v for k, v in self.g.__dict__.items() if k != "calc_cache"}
-            self.undo = (pickle.dumps(keep, pickle.HIGHEST_PROTOCOL), dict(self.ts), mine)
+        hidden_move = mine is not None and any(
+            hand[i].get("hidden") for i in (mine.get("cards") or mine.get("targets") or []) if i < len(hand))
+        if mine is not None and (hidden_move or self.chain):
+            self.chain.append({"blob": self._snap(), "act": mine, "hidden": hidden_move, "seen": None,
+                               "local": {k: self.ts[k] for k in self.LOCAL if k in self.ts}})
         if mine is None or not self.g.apply(self.ts, mine):
             self.lost = f"simulator could not mirror {key}"
         self.ts = None
