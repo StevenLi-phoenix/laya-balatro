@@ -275,6 +275,7 @@ def play_run(b: Bridge, pol, gen: int, run_id: str, args) -> dict:
             "notes": (f"{twin.synced}/{twin.calls}" if twin else None), "twin_lost": (twin.lost if twin else None),
             "twin_repairs": (twin.repairs if twin else None),
             "twin_aligned": (f"{twin.aligned}/{twin.aligned + twin.unaligned}" if twin else None),
+            "twin_hidden_fixes": (twin.hidden_fixes if twin else None),
             "minutes": round((time.time() - t0) / 60, 1), "deck": args.deck, "stake": args.stake,
             "temperature": args.temperature, "time": time.strftime("%Y-%m-%d %H:%M")}, decisions
 

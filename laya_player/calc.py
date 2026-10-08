@@ -18,8 +18,10 @@ from __future__ import annotations
 
 import copy
 import hashlib
+import itertools
 import math
 import os
+import pickle
 import re
 
 import numpy as np
@@ -201,6 +203,8 @@ class Twin:
         self.g, self.ts, self.lost = SimGame(seed), None, None
         self.synced = self.calls = self.repairs = 0
         self.aligned = self.unaligned = 0  # hand states matched card-for-card by sort_id / left positional
+        self.undo = None  # state before the last move that touched face-down cards (see _redo_hidden)
+        self.hidden_fixes = 0
 
     def _align(self, s: dict, ts: dict) -> bool:
         """Order the twin's hand like the real one, card for card. Identical-looking cards (three 10♥
@@ -246,6 +250,40 @@ class Twin:
         self.repairs += fixed
         return fixed
 
+    def _redo_hidden(self, s: dict) -> dict | None:
+        """The last move played or discarded face-down cards (The House, Wheel, Fish, Mark). Their real
+        identity is hidden from the runner (the mod sends session tokens), so the twin took the cards at
+        the same positions and the next prompt differs (2026-10-08 01:38, The House: score 2904 real vs
+        1664 sim). Redo the move from the saved state with every other choice of face-down cards and keep
+        the first one that renders the real prompt."""
+        blob, ts0, act = self.undo
+        hidden = [i for i, c in enumerate(ts0["hand"]) if c.get("hidden")]
+        chosen = [i for i in (act.get("cards") or act.get("targets") or []) if i in hidden]
+        others = [i for i in hidden if i not in chosen]
+        eng = [ts0["_hidx"][i] for i in hidden]
+        want = game.state_text(s)
+        for combo in itertools.combinations(eng, len(chosen)):
+            rest = [e for e in eng if e not in combo]
+            hidx = list(ts0["_hidx"])
+            for i, e in zip(chosen + others, list(combo) + rest):
+                hidx[i] = e
+            if hidx == ts0["_hidx"]:
+                continue  # the choice already made
+            self.g.__dict__.update(pickle.loads(blob))
+            alt = dict(ts0, _hidx=hidx)
+            if not self.g.apply(alt, act):
+                continue
+            ts = self.g.pending()
+            if ts is None:
+                continue
+            for k in ("selected", "sel_budget", "pending_pick", "pick_tries"):
+                if k in s:
+                    ts[k] = s[k]
+            if ts["phase"] == s["phase"] and game.state_text(ts) == want:
+                self.hidden_fixes += 1
+                return ts
+        return None
+
     def annotate(self, s: dict, cands: list[dict]) -> bool:
         if s.get("phase") == "hand":
             self.calls += 1
@@ -268,6 +306,12 @@ class Twin:
                 ts[k] = s[k]
         self.g.selected = list(s.get("selected", []))
         a, b = game.state_text(s), game.state_text(ts)
+        if (a != b or ts["phase"] != s["phase"]) and self.undo is not None:
+            fixed = self._redo_hidden(s)
+            if fixed is not None:
+                ts, b = fixed, a
+                self.g.selected = list(s.get("selected", []))
+        self.undo = None
         if a != b or ts["phase"] != s["phase"]:
             diff = next(((x, y) for x, y in zip(a.splitlines(), b.splitlines()) if x != y), (a[-80:], b[-80:]))
             self.lost = f"real {diff[0][:100]!r} vs sim {diff[1][:100]!r}"
@@ -287,6 +331,11 @@ class Twin:
             return
         key = game.action_key(a)
         mine = next((x for x in game.candidates(self.ts) if game.action_key(x) == key), None)
+        hand = self.ts.get("hand", [])
+        if mine is not None and any(hand[i].get("hidden") for i in (mine.get("cards") or mine.get("targets") or [])
+                                    if i < len(hand)):
+            keep = {k: v for k, v in self.g.__dict__.items() if k != "calc_cache"}
+            self.undo = (pickle.dumps(keep, pickle.HIGHEST_PROTOCOL), dict(self.ts), mine)
         if mine is None or not self.g.apply(self.ts, mine):
             self.lost = f"simulator could not mirror {key}"
         self.ts = None
