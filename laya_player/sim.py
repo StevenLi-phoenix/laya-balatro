@@ -361,6 +361,29 @@ def _install_saved_round_fix() -> None:
 _install_saved_round_fix()
 
 
+def _install_suit_original_fix() -> None:
+    """Steamodded's Card:set_base keeps a card's suit_nominal_original (the hand-sort tiebreaker
+    between cards of one rank and suit); jackdaw resets it to the new suit on every set_base, which
+    Death, the suit tarots and Strength all go through. Seed 7DFLCM1I: an 8♥ that Death turned into
+    an 8♦ (then made Bonus) sorted after the native 8♦ in the twin and before it in the real game."""
+    from jackdaw.engine.card import Card
+    if getattr(Card.set_base, "_laya", False):
+        return
+    orig = Card.set_base
+
+    def set_base(self, card_key, suit, value):
+        keep = self.base.suit_nominal_original if getattr(self, "base", None) is not None else None
+        orig(self, card_key, suit, value)
+        if keep is not None and self.base is not None:
+            self.base.suit_nominal_original = keep
+
+    set_base._laya = True
+    Card.set_base = set_base
+
+
+_install_suit_original_fix()
+
+
 # Boss forcing for sim/real twins. The real game (under Steamodded) draws the same 'boss'
 # pseudoseed as jackdaw yet shows a different boss; everything else (cards, tags, shops)
 # matches bit-for-bit. A twin replay therefore takes the bosses the real run showed.
