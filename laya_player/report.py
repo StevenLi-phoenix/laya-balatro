@@ -158,6 +158,106 @@ def rl_curve(its: list[dict]) -> None:
     fig.savefig(OUT / "stage2_rl.png", dpi=130)
 
 
+STAGE3_FIRST = 66
+# restarts that changed the code rather than the arguments (runs/stage3_n8.log has the times)
+STAGE3_CODE = {"2026-10-07 22:28": "sim fix: Marble stone", "2026-10-08 01:13": "paused 23:03, resumed",
+               "2026-10-08 07:27": "sim fix: Mr. Bones payout", "2026-10-08 10:25": "sim fix: suit tiebreak"}
+
+
+def _iter_times(first: int) -> dict[int, str]:
+    """'YYYY-MM-DD HH:MM:SS' per iteration from simloop.log (times only; a smaller time is the next day)."""
+    import datetime
+    day, prev, out = datetime.date(2026, 10, 7), None, {}
+    for l in (ROOT / "runs_sim" / "simloop.log").read_text(encoding="utf8").splitlines():
+        m = re.match(r"(\d\d:\d\d:\d\d) iter (\d+):", l)
+        if not m or int(m[2]) < first:
+            continue
+        if prev and m[1] < prev:
+            day += datetime.timedelta(days=1)
+        prev = m[1]
+        out[int(m[2])] = f"{day} {m[1]}"
+    return out
+
+
+def _stage3_changes(its: list[dict]) -> list[tuple[float, str]]:
+    log = ROOT / "runs" / "stage3_n8.log"
+    times = _iter_times(STAGE3_FIRST)
+    out, prev = [], None
+    for l in (log.read_text(encoding="utf8").splitlines() if log.exists() else []):
+        m = re.match(r"(\d{4}-\d\d-\d\d \d\d:\d\d:\d\d) simloop \(re\)started: (.*)", l)
+        if not m:
+            continue
+        args = dict(re.findall(r"--([\w-]+) (\S+)", m[2]))
+        nxt = [i for i, t in sorted(times.items()) if t > m[1]]
+        if not nxt:
+            continue
+        labels = {"temperature": "self-play T", "promote-t": "promote at t >="}
+        txt = ", ".join(f"{labels.get(k, k)} {v}" for k, v in args.items() if prev is not None and prev.get(k) != v)
+        txt = txt or STAGE3_CODE.get(m[1][:16], "")
+        if prev is None:
+            txt = "computed notes in the options, from raw0056"
+        prev = args
+        if txt:
+            out.append((nxt[0] - 0.5, txt))
+    return out
+
+
+def stage3_curve() -> Path:
+    """Stage 3 in the Stage 1 chart style, plus each champion's score on Stage 2's fixed ladder seeds."""
+    its = [r for r in rows(ROOT / "runs_sim" / "iters.jsonl") if r["iter"] >= STAGE3_FIRST]
+    x = [r["iter"] for r in its]
+    fig, ax = plt.subplots(figsize=(max(10.0, 0.26 * len(x)), 5.0))
+    rng = random.Random(0)
+    jit = lambda i, n, off: [i + off + rng.uniform(-0.11, 0.11) for _ in range(n)]
+    for i, r in zip(x, its):
+        ax.scatter(jit(i, len(r["train_games"]), -0.25), r["train_games"], s=3, c="#bbbbbb", alpha=0.5, lw=0)
+        ax.scatter(jit(i, len(r["champion_games"]), 0.0), r["champion_games"], s=3, c="#e8a0a0", alpha=0.5, lw=0)
+        ax.scatter(jit(i, len(r["test_games"]), 0.25), r["test_games"], s=3, c="#7fa3e0", alpha=0.6, lw=0)
+    ax.scatter([i - 0.25 for i in x], [r["train_rounds"] for r in its], s=16, c="#888888", marker="_",
+               label="self-play games (sampled): each game + mean")
+    ax.scatter([i + 0.25 for i in x], [r["test_rounds"] for r in its], s=18, c="#4a7bd0",
+               label="new weights, greedy, fresh seeds: each game + mean")
+    ax.scatter(x, [r["champion_rounds"] for r in its], s=14, c="#d04a4a", marker="x",
+               label="champion on the same fresh seeds: each game + mean")
+    scores: dict[str, list[float]] = {}
+    before, line = "raw0056.pt", []
+    for r in its:
+        scores.setdefault(before, []).append(r["champion_rounds"])
+        if r["champion"] != before:
+            scores.setdefault(r["champion"], []).append(r["test_rounds"])
+        before = r["champion"]
+        line.append(st.mean(scores[before]))
+    ax.step(x, line, where="post", c="#d04a4a", lw=1.5, label="champion (mean of its head-to-heads)")
+    # fixed seeds: Stage 2's final ladder, every Stage 3 champion with notes
+    lad = json.loads((ROOT / "runs" / "ladder.json").read_text())
+    base = st.mean(lad["results"]["raw0056"]["rounds"])
+    ax.axhline(base, c="#888", lw=0.8, ls="--")
+    ax.text(x[-1] + 0.6, base, f"raw0056, no notes\n{base:.2f} (128 fixed seeds)", fontsize=8, color="#666", va="center")
+    pts = []
+    for f in sorted((ROOT / "runs").glob("ladder*_calc.json")):
+        res = json.loads(f.read_text())["results"]
+        name, r = next(iter(res.items()))
+        ck = name.split("+")[0]
+        at = STAGE3_FIRST - 0.5 if ck == "raw0056" else int(ck[3:])
+        pts.append((at, st.mean(r["rounds"])))
+    pts.sort()
+    ax.plot([p[0] for p in pts], [p[1] for p in pts], c="k", lw=0.8, ls=":", marker="D", ms=5,
+            label="champion + notes on the same 128 fixed seeds (ladder)")
+    top = max([9.5] + [max(r["test_games"]) + 0.8 for r in its] + [max(r["train_games"]) + 0.8 for r in its])
+    for k, (at, txt) in enumerate(_stage3_changes(its)):
+        ax.axvline(at, c="k", ls=":", lw=0.8)
+        ax.text(at - 0.15, top * (0.97 - 0.2 * (k % 3)), txt, fontsize=7, ha="right", rotation=90, va="top",
+                bbox=dict(facecolor="white", edgecolor="none", alpha=0.7, pad=0.5))
+    ax.set(xlabel="iteration", ylabel="rounds won per run", ylim=(0, top), xlim=(x[0] - 1.3, x[-1] + 3.2),
+           title="Stage 3: computed consequences in the click options, pure RL in jackdaw (Red Deck / White Stake)")
+    ax.xaxis.set_major_locator(matplotlib.ticker.MaxNLocator(integer=True))
+    ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.13), ncol=3, fontsize=8, frameon=False)
+    fig.tight_layout()
+    path = OUT / "stage3_rl.png"
+    fig.savefig(path, dpi=130)
+    return path
+
+
 def stage1(rt: list[dict]) -> list[str]:
     base = ROOT / "runs_sim_v2_combo"
     its = rows(base / "iters.jsonl")
