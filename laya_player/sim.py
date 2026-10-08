@@ -305,6 +305,39 @@ def _install_deck_insertion_fix() -> None:
 _install_deck_insertion_fix()
 
 
+def _install_marble_fix() -> None:
+    """Marble Joker's Stone card is in the deck when the round's 'nr' shuffle runs (Balatro sorts the
+    deck by sort_id before shuffling, so only membership matters). jackdaw adds it after the shuffle,
+    which deals a different hand from the next blind on: seed CJRX8CNY parted from its twin right
+    after Marble was bought, and with the stone shuffled in the replay deals the real hands again."""
+    if getattr(engine, "_laya_marble_fix", False):
+        return
+    orig = engine._handle_select_blind
+
+    def wrapped(gs, *a, **kw):
+        rng = gs.get("rng")
+        if rng is None:
+            return orig(gs, *a, **kw)
+        plain = rng.shuffle
+
+        def shuffle(lst, seed_val):
+            if lst is gs.get("deck") and gs.get("pending_deck_bottom"):
+                lst[:0] = gs.pop("pending_deck_bottom")
+            return plain(lst, seed_val)
+
+        rng.shuffle = shuffle
+        try:
+            return orig(gs, *a, **kw)
+        finally:
+            del rng.shuffle  # back to the class method (a game state may be pickled later)
+
+    engine._handle_select_blind = wrapped
+    engine._laya_marble_fix = True
+
+
+_install_marble_fix()
+
+
 # Boss forcing for sim/real twins. The real game (under Steamodded) draws the same 'boss'
 # pseudoseed as jackdaw yet shows a different boss; everything else (cards, tags, shops)
 # matches bit-for-bit. A twin replay therefore takes the bosses the real run showed.
