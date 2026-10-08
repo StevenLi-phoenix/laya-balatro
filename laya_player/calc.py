@@ -20,6 +20,7 @@ import copy
 import hashlib
 import math
 import os
+import re
 
 import numpy as np
 
@@ -198,7 +199,21 @@ class Twin:
     def __init__(self, seed: str):
         from .sim import SimGame
         self.g, self.ts, self.lost = SimGame(seed), None, None
-        self.synced = self.calls = 0
+        self.synced = self.calls = self.repairs = 0
+
+    def _repair(self, s: dict) -> bool:
+        """Take over from the real game what jackdaw draws differently and nothing else depends on.
+        To Do List: the real game named another poker hand than jackdaw for the same purchase (real Four
+        of a Kind, sim Straight Flush; first real run with notes to part); the hand only decides its $4."""
+        fixed = False
+        for rj, j in zip(s.get("jokers", []), self.g.gs.get("jokers", [])):
+            if rj.get("key") == j.center_key == "j_todo_list":
+                m = re.search(r"poker hand is an? (.+?),", rj.get("desc") or "")
+                if m and m[1] in game.HAND_BASE and j.ability.get("to_do_poker_hand") != m[1]:
+                    j.ability["to_do_poker_hand"] = m[1]
+                    fixed = True
+        self.repairs += fixed
+        return fixed
 
     def annotate(self, s: dict, cands: list[dict]) -> bool:
         if s.get("phase") == "hand":
@@ -215,6 +230,8 @@ class Twin:
         if ts is None:
             self.lost = "simulator run ended"
             return False
+        if self._repair(s):
+            ts = self.g.pending()
         for k in ("selected", "sel_budget", "pending_pick", "pick_tries"):  # local click state lives in the runner
             if k in s:
                 ts[k] = s[k]
