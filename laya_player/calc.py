@@ -200,6 +200,37 @@ class Twin:
         from .sim import SimGame
         self.g, self.ts, self.lost = SimGame(seed), None, None
         self.synced = self.calls = self.repairs = 0
+        self.aligned = self.unaligned = 0  # hand states matched card-for-card by sort_id / left positional
+
+    def _align(self, s: dict, ts: dict) -> bool:
+        """Order the twin's hand like the real one, card for card. Identical-looking cards (three 10♥
+        after The Sun) read the same in both prompts, but the real game acted on particular cards and
+        Balatro shuffles by each card's sort_id: The Hanged Man on "10♥ #2/#3" destroyed other copies
+        in the twin and the next deal differed (2026-10-08 01:19). The mod's id of a visible card is its
+        sort_id. The absolute values differ (Balatro's counter also counts menu cards and never resets;
+        jackdaw's is per process), but both create cards in the same order, so within a group of
+        identical-looking cards the k-th smallest real id is the twin's k-th smallest sort_id."""
+        real = [c.get("id") for c in s.get("hand", [])]
+        if not real or len(real) != len(ts.get("hand", [])) or any(c.get("hidden") for c in s["hand"]):
+            return False  # face-down cards carry session tokens, not sort_ids: positional as before
+        groups: dict[str, list[int]] = {}
+        for i, c in enumerate(ts["hand"]):
+            groups.setdefault(repr(sorted(c.items())), []).append(i)
+        dup = [g for g in groups.values() if len(g) > 1]
+        if not dup:
+            return False
+        if any(not isinstance(real[i], int) for g in dup for i in g):
+            self.unaligned += 1
+            return False
+        hand = self.g.gs.get("hand", [])
+        hidx = list(ts["_hidx"])
+        for g in dup:
+            by_real = sorted(g, key=lambda i: real[i])
+            by_twin = sorted((hidx[i] for i in g), key=lambda e: hand[e].sort_id)
+            for i, e in zip(by_real, by_twin):
+                ts["_hidx"][i] = e
+        self.aligned += 1
+        return True
 
     def _repair(self, s: dict) -> bool:
         """Take over from the real game what jackdaw draws differently and nothing else depends on.
@@ -241,6 +272,8 @@ class Twin:
             diff = next(((x, y) for x, y in zip(a.splitlines(), b.splitlines()) if x != y), (a[-80:], b[-80:]))
             self.lost = f"real {diff[0][:100]!r} vs sim {diff[1][:100]!r}"
             return False
+        if s.get("hand"):
+            self._align(s, ts)
         s["_hidx"] = ts["_hidx"]
         self.ts = ts
         if s["phase"] == "hand":
