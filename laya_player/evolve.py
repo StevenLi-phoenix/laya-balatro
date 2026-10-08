@@ -20,7 +20,7 @@ import time
 import traceback
 from pathlib import Path
 
-from . import game
+from . import calc, game
 from .bridge import Bridge, BridgeError
 from .live import canonical, execute, live_candidates, wait_stable
 
@@ -106,6 +106,7 @@ def play_run(b: Bridge, pol, gen: int, run_id: str, args) -> dict:
     deselects, clicked = 0, False
     pending_pick = None  # raw mode: pack slot of a targeted card awaiting its targets
     pick_tries = local_run = 0  # target selections opened in this pack; clicks since the last game action
+    twin = None  # LAYA_CALC: the simulator replays this run move by move and computes the notes
     dec_f = open(RUNS / "decisions" / f"{run_id}.jsonl", "w", encoding="utf8")
     for _ in range(args.max_decisions):
         if not clicked:  # a click changes nothing in the game, so the last payload is still current
@@ -166,6 +167,13 @@ def play_run(b: Bridge, pol, gen: int, run_id: str, args) -> dict:
         elif pick_tries:
             pick_tries = 0
         cands = live_candidates(s)
+        if calc.ON and twin is None and run_seed:
+            twin = calc.Twin(run_seed)
+        if twin is not None:
+            lost = twin.lost
+            twin.annotate(s, cands)
+            if twin.lost and not lost:
+                log(f"  twin parted (no notes from here): {twin.lost}")
         txt = game.state_text(s)
         repeat = repeat + 1 if txt == last_txt else 0
         last_txt = txt
@@ -242,6 +250,8 @@ def play_run(b: Bridge, pol, gen: int, run_id: str, args) -> dict:
             log(f"  invalid {opts[idx]!r}: {e.code} {e.message[:100]}")
             continue
         busy = streak = 0
+        if twin is not None:
+            twin.apply(a)
         # like SimGame.apply: a rejected move keeps the selection; each pick gets fresh target tries
         sel_ids, deselects, pending_pick, local_run = [], 0, None, 0
         if a["t"] in ("pick", "skip_pack"):
@@ -262,6 +272,7 @@ def play_run(b: Bridge, pol, gen: int, run_id: str, args) -> dict:
     dec_f.close()
     return {"gen": gen, "run": run_id, "ckpt": pol.ckpt, "outcome": outcome, "won": won, "seed": run_seed, "bosses": [bosses[a] for a in sorted(bosses)], "rounds_won": rounds_won,
             "max_ante": max_ante, "decisions": len(decisions), "invalid": invalid, "best_hand": best_hand,
+            "notes": (f"{twin.synced}/{twin.calls}" if twin else None), "twin_lost": (twin.lost if twin else None),
             "minutes": round((time.time() - t0) / 60, 1), "deck": args.deck, "stake": args.stake,
             "temperature": args.temperature, "time": time.strftime("%Y-%m-%d %H:%M")}, decisions
 

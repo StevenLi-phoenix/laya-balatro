@@ -15,7 +15,7 @@ import statistics
 import time
 from pathlib import Path
 
-from . import evolve, simloop
+from . import calc, evolve, simloop
 from .bridge import Bridge
 from .realeval import TEST_SEEDS
 
@@ -97,15 +97,16 @@ def main():
         seed = seed or summary.get("seed")  # random runs: replay the game's own seed in the simulator
         sim = (simloop.play(pol, [seed], args.temperature, True, False, bosses=[summary.get("bosses")])[0] if seed
                else [{"rounds_won": None, "max_ante": None}])
-        row = {"ckpt": Path(ck).name, "seed": seed, "real_rounds": summary["rounds_won"],
+        row = {"ckpt": Path(ck).name + ("+calc" if calc.ON else ""), "seed": seed, "real_rounds": summary["rounds_won"],
                "real_ante": summary["max_ante"], "real_outcome": summary["outcome"],
                "sim_rounds": sim[0]["rounds_won"], "sim_ante": sim[0]["max_ante"],
                "minutes": summary["minutes"], "bosses": summary.get("bosses"),
-               "time": time.strftime("%Y-%m-%d %H:%M")}
+               "time": time.strftime("%Y-%m-%d %H:%M"), "notes": summary.get("notes"), "twin_lost": summary.get("twin_lost")}
         with open(OUT, "a", encoding="utf8") as f:
             f.write(json.dumps(row) + "\n")
         evolve.log(f"REAL {row['ckpt']} {seed}: real {row['real_rounds']} rounds (ante {row['real_ante']}, "
-                   f"{row['real_outcome']}) | sim {row['sim_rounds']} | {row['minutes']} min")
+                   f"{row['real_outcome']}) | sim {row['sim_rounds']} | {row['minutes']} min"
+                   + (f" | notes {row['notes']}" if row["notes"] else ""))
         report()
 
 

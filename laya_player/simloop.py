@@ -22,7 +22,7 @@ from pathlib import Path
 
 import torch
 
-from . import game
+from . import calc, game
 from .sim import SimGame
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -101,6 +101,7 @@ def play(pol, seeds: list[str], temperature: float, greedy: bool, record: bool,
                         d["round_won"] = True
                 round_of[gi] = g.rounds_won
             cands = game.candidates(s)
+            calc.annotate(s, cands, g.gs, g.calc_cache)
             txt = game.state_text(s)
             opts, acts = [], []
             for a in cands:
@@ -341,6 +342,7 @@ def main():
         # spawn: the workers must not inherit this process's CUDA context
         pool = ProcessPoolExecutor(args.search_workers, mp_context=multiprocessing.get_context("spawn"))
     log(f"start: champion {Path(st['champion']).name}, actions {'raw' if game.RAW else 'combo'}"
+        + (", computed notes in the options (calc)" if calc.ON else "")
         + (f", search {args.search:g} of hand turns x{args.search_workers} workers" if pool else ""))
     for it in range(st["iter"] + 1, st["iter"] + 1 + args.iters):
         t0 = time.time()

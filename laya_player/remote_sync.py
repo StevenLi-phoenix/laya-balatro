@@ -48,7 +48,8 @@ def sync(host: str, root: str) -> str | None:
         return None
     for f in ("simloop.log", "iters.jsonl"):
         scp(host, f"{root}/runs_sim/{f}", LOCAL / f)
-    for remote_f, local_f in (("raw_init_eval.json", "raw_init_eval.json"), ("stage2.log", "stage2_n8.log")):
+    for remote_f, local_f in (("raw_init_eval.json", "raw_init_eval.json"), ("stage2.log", "stage2_n8.log"),
+                              ("stage3.log", "stage3_n8.log"), ("ladder_calc.json", "ladder_calc.json")):
         scp(host, f"{root}/runs/{remote_f}", ROOT / "runs" / local_f)
     st["champion"] = str(local)
     (LOCAL / "state.json").write_text(json.dumps(st), encoding="utf8")

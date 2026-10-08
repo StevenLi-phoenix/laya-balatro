@@ -377,6 +377,17 @@ class SimGame:
         self.deselects = 0
         self.pending_pick: int | None = None  # pack slot of a targeted card awaiting its targets
         self.pick_tries = 0
+        self.calc_cache: dict = {}  # calc.py results for the current engine state (clicks do not change it)
+
+    def force_boss(self, key: str) -> None:
+        """Lockstep twin of a real run: take the boss the real game shows for this ante."""
+        rr = self.gs["round_resets"]
+        cur = rr["blind_choices"].get("Boss")
+        if cur and cur != key:
+            used = self.gs.setdefault("bosses_used", {})
+            used[cur] = used.get(cur, 1) - 1
+            used[key] = used.get(key, 0) + 1
+            rr["blind_choices"]["Boss"] = key
 
     @property
     def over(self) -> bool:
@@ -432,6 +443,7 @@ class SimGame:
             self.illegal += 1
             return False
         self.selected, self.deselects, self.pending_pick = [], 0, None
+        self.calc_cache = {}
         if a["t"] in ("skip_pack", "pick"):
             self.pick_tries = 0  # each pick (a Mega pack's next one, a queued tag pack) gets fresh tries
         return True

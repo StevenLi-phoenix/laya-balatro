@@ -19,6 +19,7 @@ Actions: {"t": select_blind|skip_blind|play|discard|use|buy|reroll|sell_joker|le
 Two action interfaces (LAYA_ACTIONS env var):
   raw (default)  Laya clicks like a player: "select K♥" ... "play selected". One choice question per
                  click, several calls per decision; no combinations, hand labels or score estimates.
+                 With LAYA_CALC=1 (Stage 3) each hand click also states its computed consequence (calc.py).
   combo          the original generator: pre-built plays/discards with hand type and ~score.
 """
 from __future__ import annotations
@@ -513,10 +514,11 @@ def action_text(state: dict, a: dict) -> str:
         return "skip this blind for the tag"
     if a.get("raw"):
         from .desc import name_of
+        note = f" → {a['note']}" if a.get("note") else ""  # computed consequence (calc.py, Stage 3)
         if t in ("select", "deselect"):
-            return f"{t} {card_labels(state['hand'])[a['card']]}"
+            return f"{t} {card_labels(state['hand'])[a['card']]}{note}"
         if t in ("play", "discard"):
-            return f"{t} selected"
+            return f"{t} selected{note}"
         tg = " on selected" if a.get("targets") else ""
         if t == "use":
             return f"use {name_of(a['key'])}{tg}"
