@@ -6,6 +6,8 @@ and in the real game are identical and a simulator-trained policy transfers with
 from __future__ import annotations
 
 import hashlib
+import json
+from pathlib import Path
 
 from jackdaw.engine import game as engine
 from jackdaw.engine.actions import (CashOut, Discard, NextRound, OpenBooster, PickPackCard, PlayHand,
@@ -384,9 +386,41 @@ def _install_suit_original_fix() -> None:
 _install_suit_original_fix()
 
 
-# Boss forcing for sim/real twins. The real game (under Steamodded) draws the same 'boss'
-# pseudoseed as jackdaw yet shows a different boss; everything else (cards, tags, shops)
-# matches bit-for-bit. A twin replay therefore takes the bosses the real run showed.
+# Real boss order. Under Steamodded the boss is drawn with the same 'boss' pseudoseed as in
+# jackdaw, but from SMODS.create_blind_pool's array, which is built by iterating a hash table:
+# the order is LuaJIT's, not jackdaw's sorted keys (ante 1: real index = a fixed permutation of
+# jackdaw's in 645/645 recorded runs). boss_order.json holds that order per ante, read from the
+# game itself (mod RPC boss_pool_order); culling by use count only filters it.
+BOSS_ORDER_FILE = Path(__file__).with_name("boss_order.json")
+
+
+def _install_real_boss_order() -> None:
+    from jackdaw.engine import blind as jblind
+    if not BOSS_ORDER_FILE.exists() or getattr(jblind.get_new_boss, "_laya_order", False):
+        return
+    orders = {int(a): keys for a, keys in json.loads(BOSS_ORDER_FILE.read_text())["orders"].items()}
+    jackdaw_get_new_boss = jblind.get_new_boss
+
+    def get_new_boss(ante, bosses_used, rng, *, win_ante=8, banned_keys=None):
+        order = orders.get(ante)
+        if not order or win_ante != 8:
+            return jackdaw_get_new_boss(ante, bosses_used, rng, win_ante=win_ante, banned_keys=banned_keys)
+        pool = [k for k in order if k not in (banned_keys or {})]
+        least = min(bosses_used.get(k, 0) for k in pool)
+        pool = [k for k in pool if bosses_used.get(k, 0) <= least]
+        key, _ = rng.element(pool, rng.seed("boss"))  # a list: drawn by array index, as in Lua
+        bosses_used[key] = bosses_used.get(key, 0) + 1
+        return key
+
+    get_new_boss._laya_order = True
+    jblind.get_new_boss = get_new_boss
+
+
+_install_real_boss_order()
+
+
+# Boss forcing for sim/real twins: a twin replay takes the bosses the real run showed (before
+# the real boss order above was known these differed; forcing still covers boss rerolls).
 # Keyed by the per-run bosses_used dict, since get_new_boss receives no other handle.
 _FORCED: dict[int, list[str]] = {}
 _orig_get_new_boss = None

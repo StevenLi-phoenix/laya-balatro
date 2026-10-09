@@ -1,5 +1,5 @@
 diff --git a/mod/src/actions.lua b/mod/src/actions.lua
-index 513baea..73a1087 100644
+index 513baea..80a5c56 100644
 --- a/mod/src/actions.lua
 +++ b/mod/src/actions.lua
 @@ -294,21 +294,48 @@ local RUN_PHASES = {
@@ -94,7 +94,7 @@ index 513baea..73a1087 100644
            return settle_result({ cashed_out = true }, false)
          end
          if not pressed and G.STATE == G.STATES.ROUND_EVAL then
-@@ -901,6 +950,60 @@ handlers.restart = function(args)
+@@ -901,6 +950,80 @@ handlers.restart = function(args)
    return phase_settle({ "BLIND_SELECT" }, { restarted = true }, 15)
  end
  
@@ -150,6 +150,26 @@ index 513baea..73a1087 100644
 +    out.hashed_seed = G.GAME.pseudorandom.hashed_seed
 +  end
 +  return ok(out)
++end
++
++-- Read-only: Steamodded's boss pool for each ante, in the order its draw indexes it.
++-- SMODS.create_blind_pool builds an array by iterating a hash table, so the order is
++-- LuaJIT's, not alphabetical; culling by use count only filters this list.
++handlers.boss_pool_order = function(args)
++  if not (G and G.GAME and G.GAME.round_resets and SMODS and SMODS.create_blind_pool) then
++    return err("CANNOT_USE_NOW", "No game state")
++  end
++  local rr = G.GAME.round_resets
++  local ante, choices = rr.ante, rr.blind_choices
++  local out = {}
++  rr.blind_choices = { Small = 'bl_small', Big = 'bl_big' }
++  for a = 1, (args.antes or 16) do
++    rr.ante = a
++    local ok_, pool = pcall(SMODS.create_blind_pool, 'boss', true)
++    out[a] = ok_ and pool or {}
++  end
++  rr.ante, rr.blind_choices = ante, choices
++  return ok({ orders = out })
 +end
 +
  handlers.continue_game = function(args)
