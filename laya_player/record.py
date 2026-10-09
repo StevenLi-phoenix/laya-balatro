@@ -25,11 +25,14 @@ def srt_time(s: float) -> str:
     return f"{ms // 3600000:02d}:{ms // 60000 % 60:02d}:{ms // 1000 % 60:02d},{ms % 1000:03d}"
 
 
-def build_srt(decisions: list[dict], t0: float, speed: float, out: Path, who: str = "Laya") -> int:
+def build_srt(decisions: list[dict], t0: float, speed: float, out: Path, who: str = "Laya",
+              min_show: float = 0.4) -> int:
     """Captions from the decision records' millisecond timestamps (`ts`, when each move was sent).
-    Within one decision the caption grows click by click and resets after the committing move,
-    so captions never overlap."""
-    events, chain = [], []
+    Within one decision the caption grows click by click and resets after the committing move.
+    Each caption ends where the next starts, so two are never on screen together; clicks of one
+    decision that follow within `min_show` seconds (video time) update the caption in place instead
+    of flashing (at 4x a burst of raw clicks lands ~20 ms apart)."""
+    events, chain = [], []  # (start, text, starts a new decision)
     for d in decisions:
         if "ts" not in d:
             continue
@@ -38,13 +41,17 @@ def build_srt(decisions: list[dict], t0: float, speed: float, out: Path, who: st
         head = f"Ante {d['ante']} {d['phase']}" + (f"  {m[1]}/{m[2]}" if m and d["phase"] == "hand" else "")
         click = act.startswith(("select ", "deselect ", "cancel ")) or "(then choose" in act
         chain.append(f"{act} ({p:.2f})")
-        events.append(((d["ts"] - t0) / speed, f"{head}\n{who}: " + " · ".join(chain[-6:])))
+        st, text = (d["ts"] - t0) / speed, f"{head}\n{who}: " + " · ".join(chain[-6:])
+        if events and len(chain) > 1 and st - events[-1][0] < min_show:
+            events[-1] = (events[-1][0], text, events[-1][2])
+        else:
+            events.append((st, text, len(chain) == 1))
         if not click:
             chain = []
     with open(out, "w", encoding="utf8") as f:
-        for i, (st, text) in enumerate(events):
+        for i, (st, text, _) in enumerate(events):
             en = events[i + 1][0] if i + 1 < len(events) else st + 3
-            f.write(f"{i + 1}\n{srt_time(max(0.0, st))} --> {srt_time(max(st + 0.25, en))}\n{text}\n\n")
+            f.write(f"{i + 1}\n{srt_time(max(0.0, st))} --> {srt_time(max(st + 0.01, en))}\n{text}\n\n")
     return len(events)
 
 
