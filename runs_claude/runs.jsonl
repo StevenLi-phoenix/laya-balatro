@@ -1,0 +1,1 @@
+{"time": "2026-10-09 17:01:16", "seed": "JYZLZ1JC", "ante": 9, "won": true, "rounds": 20, "best_hand": 91219, "most_played": "Straight (28)", "skips": 4, "moves": 210, "jokers": ["Scary Face", "Supernova", "Shortcut", "Hologram X2.25", "Pareidolia"], "straight_level": 9, "note": "logged by hand: the CLI only logged GAME_OVER before this run"}

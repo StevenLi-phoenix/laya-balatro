@@ -130,7 +130,7 @@ def main():
          "seed": p.get("seed"), "result": res if not ok else None})
     print(("OK " if ok else "REJECTED ") + desc + ("" if ok else f": {res}"))
     p2 = settle(b)
-    if p2.get("phase") == "GAME_OVER":
+    if p2.get("phase") == "GAME_OVER" or (p2.get("won") and p2.get("overlay_open")):  # a loss, or the win overlay
         log({"seed": p2.get("seed"), "ante": p2.get("ante"), "won": bool(p2.get("won"))}, "runs.jsonl")
     show(b)
 

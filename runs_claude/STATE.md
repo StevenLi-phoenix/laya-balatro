@@ -13,16 +13,20 @@ options re-index after every action; the guard refuses a mismatch) · `use SLOT 
 `jokers <new slot order>` · `new [SEED]`. Moves log: `runs_claude/moves.jsonl`; finished runs: `runs_claude/runs.jsonl`.
 Never chain two `do` commands without a `show` in between (run 1 bought Seed Money by accident that way).
 
-## Run 1 — seed JYZLZ1JC (in progress, paused 2026-10-09 for compaction)
+## Run 1 — seed JYZLZ1JC: WON (2026-10-09)
 
-- Now: **Ante 4 shop after the Small Blind, Jumbo Celestial pack open (1 pick), $20.** Plan: take Saturn
-  (Straight L4 -> L5), leave shop, then Big Blind 7,500 (skip reward Uncommon Tag = free uncommon joker in the next
-  shop; consider skipping) and boss **The Head 10,000 (Hearts debuffed)**.
-- Jokers (5/5): Hallucination, Scary Face, Ice Cream (+55, -5 per hand), Supernova, Mystic Summit (+15 Mult at 0
-  discards: burn all discards before the scoring hand). Vouchers: Paint Brush (+1 hand size), Seed Money.
-- Levels: Straight L4 (120x13), Pair L2. Deck: Mult cards 6♠ 6♦ 8♦ 7♥; Glass 6♥ (a Heart: debuffed by The Head).
-- Engine: straights (~7–9k with Mystic + Supernova). Weakness: no xMult joker; Ice Cream fading. Replace
-  Hallucination with an xMult joker when one shows up.
-- Path so far: skipped Ante 1 Small (Coupon Tag: free Hallucination, Scary Face, Ice Cream via Buffoon, Empress via
-  Jumbo Arcana); Gros Michel bought Ante 2 and destroyed after one round; every boss cleared in one hand
-  (The Window, The Club, The Goad); skipped Ante 3 Big for Meteor Tag (Saturn + Mercury), Fool copied Saturn.
+Ante 8 boss Cerulean Bell 155,731 / 100,000; 20 rounds, 4 skips, 210 commands, best hand 91,219, Straight played 28
+times. Final jokers: Scary Face, Supernova, Shortcut, Hologram (x2.25), Pareidolia; Straight L9. Screenshot
+`runs_claude/win_JYZLZ1JC.png`; recap in the parent repo's `rounds.md`, mechanics in `learnings.md`.
+The game was left on the win overlay (endless not entered).
+
+## Laya on the same footing (reports/REPORT.md)
+
+Laya on random real seeds: 1 win in 541 raw-click runs before v1.3; raw0056 9 runs mean 4.89 rounds; with computed
+notes 256 runs mean 5.78, best 22. Its recorded win (UP2YINZS) was a simulator-screened seed (0.12% sim win rate).
+Claude: 1 random seed, 1 win. n = 1, not a win rate.
+
+## Next
+
+More random-seed runs (`new` with no seed) if the user wants a win rate. Remember: a forced Cerulean Bell card goes
+along with every discard; discard indices shift after every draw, so never loop discards with fixed indices.
