@@ -1,5 +1,10 @@
 # laya-balatro — a non-generative decision model learns to play Balatro
 
+[![Laya beats real Balatro on seed UP2YINZS (click for the video)](reports/win_UP2YINZS.jpg)](https://huggingface.co/Steven10429/laya-balatro/blob/main/media/laya_balatro_win_UP2YINZS.mp4)
+
+*v1.3: Laya `raw0056` beats real Balatro (Red Deck, White Stake) on seed UP2YINZS, 27 rounds, every click its own.
+The seed was picked by the simulator; see [v1.3](#v13-2026-10-09-a-recorded-real-win-stages-3-and-4-hosted-decision-apis).*
+
 [Laya](https://huggingface.co/convaiinnovations/laya) (ConvAI, 421M-parameter ModernBERT-large) cannot
 generate text. It reads a state and scores a list of options. This repo turns
 [Balatro](https://www.playbalatro.com/) into exactly that kind of problem and trains Laya on it, in a
@@ -20,9 +25,32 @@ simulator and in the real game.
   the champion on the same fresh random seeds. Real Balatro validates the champion. From v1.2 a share of hand
   decisions is also labelled by a simulator search (expert iteration, within a trust region).
 
-Weights and a gameplay video: [Steven10429/laya-balatro](https://huggingface.co/Steven10429/laya-balatro). Changes: [`CHANGELOG.md`](CHANGELOG.md). Write-up with charts: [`reports/REPORT.md`](reports/REPORT.md).
+Weights and videos (the v1.3 win, side-by-side API runs): [Steven10429/laya-balatro](https://huggingface.co/Steven10429/laya-balatro). Changes: [`CHANGELOG.md`](CHANGELOG.md). Write-up with charts: [`reports/REPORT.md`](reports/REPORT.md).
 
 ## Results (Red Deck, White Stake)
+
+### v1.3 (2026-10-09): a recorded real win, Stages 3 and 4, hosted decision APIs
+
+| | result |
+|---|---|
+| real win, recorded | `raw0056` on seed UP2YINZS: 27 rounds, Ante 10; simulator twin 27 |
+| how the seed was found | 2,592 fresh random seeds in the simulator, raw0056 won 3 (0.12%); replayed alone on the validator PC, then real |
+| random seeds, real game | 9 recorded runs today, best 14, no win; one win in 541 earlier raw-click runs |
+| Stage 3: computed notes in the options | 45 iterations; champions with notes 4.59–5.21 on the 128 fixed seeds vs raw0056's 5.63 without |
+| Stage 4: teacher imitation (aborted) | agreement 70.8% → 81.1%, ladder 5.63 → 4.02–4.89 |
+| hosted decision APIs, zero-shot (64 seeds) | Jev 1.13 0.02 rounds, GPT-6 Luna Decisions 0.20, Laya raw0056 6.06 |
+
+1. **The simulator now draws the real game's bosses.** Steamodded draws the same 'boss' pseudoseed as jackdaw but
+   indexes a pool built by iterating a hash table, so the order is LuaJIT's, not alphabetical. A mod RPC reads that
+   order per ante; all 646 recorded real boss sequences now match. Before this, no simulated seed could predict a
+   real run, and twin replays had to force the bosses.
+2. **So the simulator can pick the seed.** A seed raw0056 wins in jackdaw, replayed alone on the validator PC (batched
+   play can flip near-ties), won in real Balatro move for move. The play is Laya's; the seed is chosen.
+3. **Telling Laya the consequences did not help** (Stage 3), and **imitating the teacher again made it worse**
+   (Stage 4), as in Stage 1.
+4. **Zero-shot hosted decision models barely clear a blind**: they skip the first blind or play single cards.
+
+![decision models](reports/decision_models.png)
 
 ### Stage 2 (v1.1–v1.2, ended 2026-10-07): raw clicks, pure RL, then search labels
 
@@ -103,7 +131,14 @@ laya_player/
   report.py    charts + reports/REPORT.md  remote_sync.py  mirror a remote trainer's champion + logs
   search.py    simulator search for hand decisions (labels for self-play)
   ladder.py    same-seed comparison of checkpoints
+  calc.py      computed consequences in the options (Stage 3, LAYA_CALC=1) + the real-game twin
+  teach.py     chunked teacher imitation with the ladder after each chunk (Stage 4)
+  screen.py    simulator screening of fresh seeds for wins
+  apiplay.py   hosted decision APIs (OpenRouter) on the same click interface
+  compare_video.py  side-by-side real-game videos
+  boss_order.json   the real game's boss pool order per ante (mod RPC boss_pool_order)
 run_stage2_n8.sh         Stage 2 on a Linux GPU box: kickoff imitation, then pure RL (simloop)
+run_stage3_n8.sh, run_stage4_n8.sh  Stages 3 and 4 on the GPU box
 mod/balatro-agent.patch  changes to the mod (seed/won/ability in state, shop-settle guard, go_to_menu, endless_mode)
 runs/, runs_sim/         logs and per-run results behind the report
 ```

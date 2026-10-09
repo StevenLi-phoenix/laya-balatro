@@ -411,18 +411,34 @@ def hunt(rt: list[dict]) -> list[str]:
     rs = [r for r in rt if r["time"] >= HUNT_START and r["real_outcome"] in ("won", "lost")]
     if not rs:
         return []
-    won = [r for r in rs if r["real_outcome"] == "won"]
-    md = ["## v1.3: playing real Balatro until a win\n",
-          f"The best simulator checkpoint, raw0056 (Stage 2; no computed notes), played real Balatro on random seeds, "
-          f"greedy, with every run screen-recorded. {len(rs)} runs, mean {st.mean(r['real_rounds'] for r in rs):.2f} "
-          f"rounds, best {max(r['real_rounds'] for r in rs)}, {len(won)} won."]
-    for r in won:
-        md.append(f"\n**Win**: seed {r['seed']}, run {rs.index(r) + 1} of the hunt, beat Ante 8 "
-                  f"({r['real_rounds']} rounds incl. endless; simulator twin {r['sim_rounds']}). Video: "
+    sf = ROOT / "runs" / "screened_seeds.txt"
+    screened = set(sf.read_text().split()) if sf.exists() else set()
+    rnd = [r for r in rs if r["seed"] not in screened]
+    scr = [r for r in rs if r["seed"] in screened]
+    earlier = [r for r in rt if r["ckpt"].startswith("raw") and r["time"] < HUNT_START
+               and r["real_outcome"] in ("won", "lost")]
+    sims = rows(ROOT / "runs" / "screen_raw0056_n8.jsonl") + rows(ROOT / "runs" / "screen_raw0056_pc.jsonl")
+    sim_wins = [x for x in sims if x["ante"] > 8]
+    md = ["## v1.3: a real win, recorded\n",
+          "raw0056 (best on the 128-seed ladder; Stage 2, no computed notes) played real Balatro greedily, every run "
+          f"screen-recorded. On random seeds: {len(rnd)} runs, mean {st.mean(r['real_rounds'] for r in rnd):.2f} rounds, "
+          f"best {max(r['real_rounds'] for r in rnd)}, no win; before this, {sum(r['real_outcome'] == 'won' for r in earlier)} "
+          f"win in {len(earlier)} raw-click real runs.\n",
+          "Then the simulator picked the seed. It now draws the real game's bosses (Steamodded indexes a hash-ordered pool; "
+          "all 646 recorded real boss sequences match), so a seed Laya wins in jackdaw should win in the real game. "
+          f"{len(sims):,} fresh random seeds, greedy: raw0056 won {len(sim_wins)} ({len(sim_wins) / len(sims):.2%}). "
+          "Batched play on the GPU box can flip a near-tie, so each sim win was replayed alone on the validator PC "
+          "(X0OVDA6S fell to 15 rounds there; UP2YINZS held, twice) before the real game played it.\n"]
+    for r in scr:
+        md.append(f"**{r['seed']}: real Balatro {r['real_rounds']} rounds, Ante {r['real_ante']}, "
+                  f"{'won' if r['real_outcome'] == 'won' else 'lost'}; simulator twin {r['sim_rounds']} rounds.** The seed "
+                  "was chosen; the play was not: every click is Laya's, greedy, in the real game. Video: "
                   f"`media/laya_balatro_win_{r['seed']}.mp4` on Hugging Face.\n")
-    hist = [r["real_rounds"] for r in rs]
+        if (OUT / f"win_{r['seed']}.jpg").exists():
+            md.append(f"![win](win_{r['seed']}.jpg)\n")
+    hist = [r["real_rounds"] for r in rnd]
     bins = [(0, 2), (3, 5), (6, 8), (9, 11), (12, 14), (15, 17), (18, 23), (24, 99)]
-    md += ["", "| rounds won | 0–2 | 3–5 | 6–8 | 9–11 | 12–14 | 15–17 | 18–23 | 24+ (win) |",
+    md += ["Random-seed runs this session:\n", "| rounds won | 0–2 | 3–5 | 6–8 | 9–11 | 12–14 | 15–17 | 18–23 | 24+ (win) |",
            "|---|---|---|---|---|---|---|---|---|",
            "| runs | " + " | ".join(str(sum(lo <= x <= hi for x in hist)) for lo, hi in bins) + " |", ""]
     return md

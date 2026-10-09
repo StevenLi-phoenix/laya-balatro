@@ -1,0 +1,12 @@
+2026-10-07 20:05:13 zero-shot ladder start
+Fetching 5 files:   0%|          | 0/5 [00:00<?, ?it/s]Fetching 5 files: 100%|██████████| 5/5 [00:00<00:00, 416.52it/s]
+/home/lishuyu/laya-player/.venv/lib/python3.12/site-packages/laya/agent.py:1404: RuntimeWarning: laya: this checkpoint ships invalid temperatures or values outside [0.5, 5]; using choice:11+=0.10058280825614929 -> 0.5. Treat confidence from the affected entries as uncalibrated.
+  return Agent(model_id_or_path, device=device, token=token, subfolder=subfolder, fast=fast,
+raw0056+calc mean 5.05 median 2.0 >=9 36/128 wins 0
+2026-10-07 20:09:19 simloop (re)started: --batch 32 --lr 3e-6 --games 256 --test-games 128 --temperature 0.3 --epochs 2 --group 4 --credit best
+2026-10-07 22:28:09 simloop (re)started: --batch 32 --lr 3e-6 --games 256 --test-games 128 --temperature 0.3 --epochs 2 --group 4 --credit best
+2026-10-08 01:13:03 simloop (re)started: --batch 32 --lr 3e-6 --games 256 --test-games 128 --temperature 0.3 --epochs 2 --group 4 --credit best
+2026-10-08 04:36:43 simloop (re)started: --batch 32 --lr 3e-6 --games 256 --test-games 128 --temperature 0.5 --epochs 2 --group 4 --credit best
+2026-10-08 06:18:49 simloop (re)started: --batch 32 --lr 3e-6 --games 256 --test-games 128 --temperature 0.5 --epochs 2 --group 4 --credit best --promote-t 2.0
+2026-10-08 07:27:42 simloop (re)started: --batch 32 --lr 3e-6 --games 256 --test-games 128 --temperature 0.5 --epochs 2 --group 4 --credit best --promote-t 2.0
+2026-10-08 10:25:52 simloop (re)started: --batch 32 --lr 3e-6 --games 256 --test-games 128 --temperature 0.5 --epochs 2 --group 4 --credit best --promote-t 2.0

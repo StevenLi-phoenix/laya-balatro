@@ -5,6 +5,15 @@
 **候选动作接口**：每个决策点把游戏状态压成一行文本，枚举合法动作（出牌组合、弃牌方案、买/卖/跳过…）作为
 `choice` 选项，Laya 选一个，执行，再观察。
 
+[![Laya 在真实 Balatro 上通关 seed UP2YINZS（点击看视频）](reports/win_UP2YINZS.jpg)](https://huggingface.co/Steven10429/laya-balatro/blob/main/media/laya_balatro_win_UP2YINZS.mp4)
+
+> **v1.3（2026-10-09）**：`raw0056` 在真实 Balatro（红牌组白注）的 seed UP2YINZS 上通关，27 关、打到 Ante 10，
+> 每一次点击都是它自己的贪心选择，模拟器孪生局同样 27 关。seed 是模拟器挑的：jackdaw 现在按真实游戏的顺序抽 Boss
+> （Steamodded 用哈希表遍历顺序建 Boss 池，mod 新增 RPC 读出每个 Ante 的顺序，646 局真实记录的 Boss 序列全部对上），
+> 2,592 个随机新 seed 里 raw0056 在模拟器中赢了 3 个，单局重放确认后交给真实游戏。随机 seed 上它仍然很难赢
+> （此前 541 局原始点牌真实对局只赢过 1 局）。Stage 3（选项里附上计算出的后果）和 Stage 4（再模仿老师）都没有超过
+> raw0056；托管决策 API（TypeSafe Jev、OpenAI GPT-6 Luna Decisions）零样本在同 64 个 seed 上平均 0.02–0.20 关。
+
 > **v1.2（Stage 2 结束，2026-10-07）**：默认接口已改为原始点牌（`select K♥` … `play selected`），老师只用于开局，
 > 之后在 jackdaw 模拟器里纯强化学习，从 v1.2 起部分出牌回合用模拟器搜索打标签。最终冠军 `raw0056`：同 128 个
 > 新 seed 平均 5.63 关，和搜索前的 `raw0046`（5.70）没有差别；真实游戏 Stage 2 全部对局平均 5.7 关，`raw0032`

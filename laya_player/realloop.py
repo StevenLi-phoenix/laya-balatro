@@ -76,7 +76,8 @@ def keep_recording(summary: dict, run_id: str, raw: Path, t0: float, args) -> No
         out = VIDEO / f"win_{seed}.mp4"
         title = (f"Laya (421M ModernBERT decision model) beats Balatro - {summary['ckpt'] and Path(summary['ckpt']).stem}, "
                  f"seed {seed}, Red Deck / White Stake, {args.speed:g}x speed")
-        record.render(raw, decisions, t0, args.speed, out, "Laya", title, end=at + args.hold_win + 2)
+        record.render(raw, decisions, t0, args.speed, out, "Laya", title, end=at + args.hold_win,
+                      slow_from=at - 2)
         record.still(raw, at + min(2.0, args.hold_win), VIDEO / f"win_{seed}.png")
         evolve.log(f"realloop: recorded the win -> {out.name} (+ cover {out.stem}.png, raw kept)")
     elif summary["rounds_won"] > best["rounds"]:

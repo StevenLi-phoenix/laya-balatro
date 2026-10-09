@@ -1,5 +1,45 @@
 # Changelog
 
+## v1.3 — A recorded real win; Stages 3 and 4; hosted decision APIs (2026-10-09)
+
+- **A real win, on video.** The ladder champion `raw0056` (Stage 2, no notes) beat real Balatro on seed UP2YINZS:
+  27 rounds, Ante 10, every click Laya's, greedy; the simulator twin also reached 27. The seed was picked by the
+  simulator (below). On random seeds the same weights played 9 recorded runs today (best 14, no win), and before
+  that real raw-click runs had produced one win in 541. Video (4x, win screen at normal speed):
+  `media/laya_balatro_win_UP2YINZS.mp4` on Hugging Face; the cover is its win screen.
+- **Simulator: the real boss order.** jackdaw's bosses never matched the real game on the same seed, so twin replays
+  forced the real bosses and no simulated seed could predict a real run. Cause: Steamodded draws the same 'boss'
+  pseudoseed, but indexes `SMODS.create_blind_pool`'s array, built by iterating a hash table, while jackdaw sorts
+  the pool by key. On Ante 1 the real index was a fixed permutation of jackdaw's in 645/645 recorded runs. A new
+  read-only mod RPC (`boss_pool_order`) reads the pool order per ante from the game (`laya_player/boss_order.json`);
+  jackdaw now draws from it. All 646 recorded real boss sequences match at every ante, finale included.
+- **Seed screening** (`screen.py`): fresh random seeds played greedily in the simulator. 2,592 seeds, raw0056 won 3
+  (0.12%). A sim win is replayed alone on the validator PC before the real game plays it, because batched play on
+  the GPU box can flip a near-tie (X0OVDA6S: 25 rounds batched, 15 alone). Simulator summaries count a run that
+  reaches Ante 9 as won: jackdaw clears `won` at the endless game over, so won runs had reported `won: False`
+  (no published number changes; no ladder or API run had reached Ante 9).
+- **Validator recording** (`realloop --ckpt --record --stop-on-win --seeds-file`): every real run is screen-recorded;
+  a won run is rendered with decision captions and a cover still, the longest run so far is kept, the rest deleted.
+- **Stage 3 (ended): computed consequences in the options** (`LAYA_CALC=1`). Each click option carried the exact
+  score of the selected cards (jackdaw's scoring on copies) and flush/straight draw odds; in real Balatro a lockstep
+  simulator twin computed the same notes (every move annotated in 248/256 runs). 45 RL iterations from raw0056, six
+  promotions (raw0068 … raw0100; promotion moved from paired t ≥ 1 to t ≥ 2, self-play temperature 0.3 → 0.5).
+  On the 128 fixed seeds every champion with notes scored 4.59–5.21 against raw0056's 5.63 without them; real
+  Balatro with notes: 256 runs, 5.78 rounds on average, best 22, no win. The notes did not help.
+- **Simulator fixes found by the Stage 3 twin**: Marble Joker's Stone card joins the deck before the round shuffle;
+  a round Mr. Bones saves pays no blind reward; `Card.set_base` keeps the original suit (Steamodded); To Do List's
+  hand and near-equal round scores are taken over from the real game; identical-looking cards are paired by sort
+  order; face-down choices are searched across the moves since the first hidden one.
+- **Stage 4 (aborted): imitate the teacher once more.** From raw0056 without notes, 100k-click chunks of the HF
+  teacher (1.25M clicks available): held-out agreement 70.8% → 81.1% after 500k clicks, while the 128-seed ladder
+  fell to 4.48, 4.74, 4.08, 4.02, 4.89 (raw0056: 5.63). As in Stage 1, closer imitation played worse.
+- **Hosted decision APIs, zero-shot.** OpenRouter's decisions endpoint returns a probability per option, the same
+  contract as Laya, so the same raw-click interface ran on it (`apiplay.py`). Same 64 seeds in the simulator:
+  raw0056 6.06 rounds; TypeSafe Jev 1.13 0.02, Jev with computed notes 0.08, OpenAI GPT-6 Luna Decisions 0.20
+  ($0.045 for 1,195 clicks, 0 errors). GPT-6 Luna Decisions skipped the very first blind in 34 of 62 traced games;
+  it reached 13 rounds on one seed (BXEMK4GS), where real Balatro then gave it 5, Laya 11 and Jev 2
+  (`media/compare_BXEMK4GS.mp4`). Chart: `reports/decision_models.png`.
+
 ## v1.2 — Stage 2 ends: search labels for hand decisions (2026-10-07)
 
 - **Stage 2 result.** 65 RL iterations; final champion `raw0056`. Same 128 fresh seeds, greedy: raw_init 1.64,

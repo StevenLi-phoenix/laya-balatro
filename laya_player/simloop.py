@@ -144,7 +144,7 @@ def play(pol, seeds: list[str], temperature: float, greedy: bool, record: bool,
                 turn[gi] += 1
     torch.cuda.empty_cache()  # long prompts fragment VRAM; an 8 GB card spills to shared memory otherwise
     searched = _search_labels(traj, jobs, search[2], search[3], stats) if search and record else []
-    summaries = [{"seed": g.seed, "rounds_won": g.rounds_won, "max_ante": g.max_ante, "won": bool(g.gs.get("won")),
+    summaries = [{"seed": g.seed, "rounds_won": g.rounds_won, "max_ante": g.max_ante, "won": bool(g.gs.get("won")) or g.max_ante > 8,
                   "illegal": g.illegal, "steps": g.steps} for g in games]
     decisions = list(searched)
     if record and credit in ("seed", "best"):

@@ -1,0 +1,2 @@
+{"seed": "DHT8GH8V", "rounds": 0, "ante": 1, "won": false, "calls": 105, "cost": 0, "errors": 315, "invalid": 105, "forced": 0, "capped": false, "error_kinds": {"RuntimeError: HTTP 403: b'{\"error\":{\"message\":\"Budget limit exceeded (dail": 315}}
+{"seed": "PVYW8T6N", "rounds": 1, "ante": 1, "won": false, "calls": 191, "cost": 0, "errors": 573, "invalid": 191, "forced": 0, "capped": false, "error_kinds": {"RuntimeError: HTTP 403: b'{\"error\":{\"message\":\"Budget limit exceeded (dail": 573}}

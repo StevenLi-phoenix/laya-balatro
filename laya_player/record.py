@@ -99,22 +99,29 @@ def stop_capture(ff: subprocess.Popen) -> None:
 
 
 def render(raw: Path, decisions: list[dict], t0: float, speed: float, out: Path, who: str, title: str,
-           end: float | None = None) -> int:
+           end: float | None = None, slow_from: float | None = None, hold: float = 3.0) -> int:
     """Speed up `raw`, burn in `title` and the decision captions; `end` cuts the raw capture at
-    that many seconds. Returns the caption count."""
+    that many seconds. From `slow_from` (raw seconds) on, play at normal speed without captions and
+    hold the last frame `hold` seconds (a win screen). Returns the caption count."""
     srt = out.with_suffix(".srt")
     n = build_srt(decisions, t0, speed, srt, who)
     title = title.replace(":", r"\:").replace("'", "")
     # Windows ffmpeg builds have no fontconfig default: name the font file / folder explicitly
     # (without them drawtext crashes with an access violation).
     fonts = r"C\:/Windows/Fonts"
-    vf = (f"setpts=PTS/{speed},scale=1280:-2,"
-          f"drawtext=fontfile='{fonts}/arial.ttf':text='{title}':x=12:y=10:fontsize=20:fontcolor=white:box=1:"
-          f"boxcolor=black@0.55:boxborderw=6,"
-          f"subtitles={srt.name}:fontsdir='{fonts}':force_style='FontName=Segoe UI Symbol,FontSize=15,Alignment=2,"
-          f"BorderStyle=3,Outline=1,BackColour=&H90000000,MarginV=24'")
+    head = (f"scale=1280:-2,drawtext=fontfile='{fonts}/arial.ttf':text='{title}':x=12:y=10:fontsize=20:"
+            f"fontcolor=white:box=1:boxcolor=black@0.55:boxborderw=6")
+    subs = (f"subtitles={srt.name}:fontsdir='{fonts}':force_style='FontName=Segoe UI Symbol,FontSize=15,Alignment=2,"
+            f"BorderStyle=3,Outline=1,BackColour=&H90000000,MarginV=24'")
     cut = ["-t", f"{end:.2f}"] if end else []
-    subprocess.run(["ffmpeg", "-loglevel", "error", "-y", *cut, "-i", str(raw.resolve()), "-vf", vf, "-r", "30",
+    if slow_from is None:
+        filt = ["-vf", f"setpts=PTS/{speed},{head},{subs}"]
+    else:
+        filt = ["-filter_complex",
+                f"[0:v]split[x][y];[x]trim=0:{slow_from:.2f},setpts=(PTS-STARTPTS)/{speed},{head},{subs}[a];"
+                f"[y]trim=start={slow_from:.2f},setpts=PTS-STARTPTS,{head},tpad=stop_mode=clone:stop_duration={hold}[b];"
+                f"[a][b]concat=n=2:v=1:a=0[v]", "-map", "[v]"]
+    subprocess.run(["ffmpeg", "-loglevel", "error", "-y", *cut, "-i", str(raw.resolve()), *filt, "-r", "30",
                     "-an", "-c:v", "libx264", "-crf", "23", "-pix_fmt", "yuv420p", out.name], check=True, cwd=out.parent)
     return n
 
