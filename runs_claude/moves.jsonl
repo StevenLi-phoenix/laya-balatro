@@ -1,0 +1,70 @@
+{"time": "2026-10-09 16:23:25", "cmd": "new", "seed": null}
+{"time": "2026-10-09 16:23:37", "cmd": "do", "args": [1], "desc": "skip this blind for the tag", "ok": true, "ante": 1, "phase": "blind", "seed": "JYZLZ1JC", "result": null}
+{"time": "2026-10-09 16:23:42", "cmd": "do", "args": [0], "desc": "play this blind", "ok": true, "ante": 1, "phase": "blind", "seed": "JYZLZ1JC", "result": null}
+{"time": "2026-10-09 16:23:53", "cmd": "play", "args": [1, 3, 4, 5, 7], "desc": "play 10♥ 9♣ 8♥ 7♠ 6♥", "ok": true, "ante": 1, "phase": "hand", "seed": "JYZLZ1JC", "result": null}
+{"time": "2026-10-09 16:24:08", "cmd": "discard", "args": [4, 5, 6, 7], "desc": "discard 10♣ 7♦ 5♠ 3♠", "ok": true, "ante": 1, "phase": "hand", "seed": "JYZLZ1JC", "result": null}
+{"time": "2026-10-09 16:24:23", "cmd": "play", "args": [0, 1, 2, 3], "desc": "play A♥ A♣ K♠ K♦", "ok": true, "ante": 1, "phase": "hand", "seed": "JYZLZ1JC", "result": null}
+{"time": "2026-10-09 16:24:33", "cmd": "play", "args": [0, 1, 2, 6, 7], "desc": "play Q♠ Q♣ Q♦ 2♥ 2♦", "ok": true, "ante": 1, "phase": "hand", "seed": "JYZLZ1JC", "result": null}
+{"time": "2026-10-09 16:24:46", "cmd": "do", "args": [1], "desc": "buy joker Hallucination $0", "ok": true, "ante": 1, "phase": "shop", "seed": "JYZLZ1JC", "result": null}
+{"time": "2026-10-09 16:24:51", "cmd": "do", "args": [0], "desc": "buy joker Scary Face $0", "ok": true, "ante": 1, "phase": "shop", "seed": "JYZLZ1JC", "result": null}
+{"time": "2026-10-09 16:24:53", "cmd": "do", "args": [0], "desc": "buy booster Buffoon Pack $0", "ok": true, "ante": 1, "phase": "shop", "seed": "JYZLZ1JC", "result": null}
+{"time": "2026-10-09 16:25:02", "cmd": "do", "args": [1], "desc": "take joker Ice Cream", "ok": true, "ante": 1, "phase": "pack", "seed": "JYZLZ1JC", "result": null}
+{"time": "2026-10-09 16:25:11", "cmd": "do", "args": [5], "desc": "use Temperance", "ok": true, "ante": 1, "phase": "shop", "seed": "JYZLZ1JC", "result": null}
+{"time": "2026-10-09 16:25:13", "cmd": "do", "args": [0], "desc": "buy voucher Seed Money $10", "ok": true, "ante": 1, "phase": "shop", "seed": "JYZLZ1JC", "result": null}
+{"time": "2026-10-09 16:25:27", "cmd": "do", "args": [0, "Jumbo"], "desc": "buy booster Jumbo Arcana Pack $0", "ok": true, "ante": 1, "phase": "shop", "seed": "JYZLZ1JC", "result": null}
+{"time": "2026-10-09 16:25:39", "cmd": "pick", "args": [0, 2, 3], "desc": "pick tarot The Empress on 6♠ 6♦", "ok": true, "ante": 1, "phase": "pack", "seed": "JYZLZ1JC", "result": null}
+{"time": "2026-10-09 16:25:44", "cmd": "do", "args": [4, "leave"], "desc": "leave shop", "ok": true, "ante": 1, "phase": "shop", "seed": "JYZLZ1JC", "result": null}
+{"time": "2026-10-09 16:25:50", "cmd": "do", "args": [0, "play"], "desc": "play this blind", "ok": true, "ante": 1, "phase": "blind", "seed": "JYZLZ1JC", "result": null}
+{"time": "2026-10-09 16:26:04", "cmd": "play", "args": [2, 3, 4, 5, 7], "desc": "play 7♥ 6♠(mult) 5♦(debuffed) 4♠ 3♥", "ok": true, "ante": 1, "phase": "hand", "seed": "JYZLZ1JC", "result": null}
+{"time": "2026-10-09 16:26:21", "cmd": "do", "args": [1, "Gros"], "desc": "buy joker Gros Michel $5", "ok": true, "ante": 2, "phase": "shop", "seed": "JYZLZ1JC", "result": null}
+{"time": "2026-10-09 16:26:26", "cmd": "do", "args": [8, "leave"], "desc": "leave shop", "ok": true, "ante": 2, "phase": "shop", "seed": "JYZLZ1JC", "result": null}
+{"time": "2026-10-09 16:26:37", "cmd": "do", "args": [0, "play"], "desc": "play this blind", "ok": true, "ante": 2, "phase": "blind", "seed": "JYZLZ1JC", "result": null}
+{"time": "2026-10-09 16:26:50", "cmd": "play", "args": [0, 1, 2, 3, 4], "desc": "play K♠ K♥ K♦ 10♠ 10♣", "ok": true, "ante": 2, "phase": "hand", "seed": "JYZLZ1JC", "result": null}
+{"time": "2026-10-09 16:27:04", "cmd": "do", "args": [10, "leave"], "desc": "leave shop", "ok": true, "ante": 2, "phase": "shop", "seed": "JYZLZ1JC", "result": null}
+{"time": "2026-10-09 16:27:06", "cmd": "do", "args": [0, "play"], "desc": "play this blind", "ok": true, "ante": 2, "phase": "blind", "seed": "JYZLZ1JC", "result": null}
+{"time": "2026-10-09 16:27:16", "cmd": "play", "args": [0, 1, 6, 7], "desc": "play A♠ A♦ 5♣ 5♦", "ok": true, "ante": 2, "phase": "hand", "seed": "JYZLZ1JC", "result": null}
+{"time": "2026-10-09 16:27:31", "cmd": "do", "args": [5, "reroll"], "desc": "reroll shop $5", "ok": true, "ante": 2, "phase": "shop", "seed": "JYZLZ1JC", "result": null}
+{"time": "2026-10-09 16:27:42", "cmd": "do", "args": [5, "reroll"], "desc": "reroll shop $6", "ok": true, "ante": 2, "phase": "shop", "seed": "JYZLZ1JC", "result": null}
+{"time": "2026-10-09 16:27:57", "cmd": "do", "args": [1, "Fool"], "desc": "buy tarot The Fool $3", "ok": true, "ante": 2, "phase": "shop", "seed": "JYZLZ1JC", "result": null}
+{"time": "2026-10-09 16:28:02", "cmd": "do", "args": [8, "Fool"], "desc": "use The Fool", "ok": true, "ante": 2, "phase": "shop", "seed": "JYZLZ1JC", "result": null}
+{"time": "2026-10-09 16:28:09", "cmd": "do", "args": [8, "leave"], "desc": "leave shop", "ok": true, "ante": 2, "phase": "shop", "seed": "JYZLZ1JC", "result": null}
+{"time": "2026-10-09 16:28:11", "cmd": "do", "args": [0, "play"], "desc": "play this blind", "ok": true, "ante": 2, "phase": "blind", "seed": "JYZLZ1JC", "result": null}
+{"time": "2026-10-09 16:28:25", "cmd": "use", "args": [0, 2, 3], "desc": "use c_empress on 8♦ 7♥", "ok": true, "ante": 2, "phase": "hand", "seed": "JYZLZ1JC", "result": null}
+{"time": "2026-10-09 16:28:32", "cmd": "discard", "args": [0, 1, 5, 7], "desc": "discard Q♠ J♦ 6♣(debuffed) 2♠", "ok": true, "ante": 2, "phase": "hand", "seed": "JYZLZ1JC", "result": null}
+{"time": "2026-10-09 16:28:40", "cmd": "discard", "args": [0, 1, 5, 7], "desc": "discard A♦ Q♥ 6♥ 3♣(debuffed)", "ok": true, "ante": 2, "phase": "hand", "seed": "JYZLZ1JC", "result": null}
+{"time": "2026-10-09 16:28:51", "cmd": "play", "args": [1, 2, 3, 4, 6], "desc": "play 10♠ 9♥ 8♦(mult) 7♥(mult) 6♠(mult)", "ok": true, "ante": 2, "phase": "hand", "seed": "JYZLZ1JC", "result": null}
+{"time": "2026-10-09 16:29:10", "cmd": "do", "args": [0, "Supernova"], "desc": "buy joker Supernova $5", "ok": true, "ante": 3, "phase": "shop", "seed": "JYZLZ1JC", "result": null}
+{"time": "2026-10-09 16:29:16", "cmd": "do", "args": [9, "leave"], "desc": "leave shop", "ok": true, "ante": 3, "phase": "shop", "seed": "JYZLZ1JC", "result": null}
+{"time": "2026-10-09 16:29:26", "cmd": "do", "args": [0, "play"], "desc": "play this blind", "ok": true, "ante": 3, "phase": "blind", "seed": "JYZLZ1JC", "result": null}
+{"time": "2026-10-09 16:29:44", "cmd": "discard", "args": [2, 3, 4, 7], "desc": "discard K♦ Q♦ 8♣ 2♥", "ok": true, "ante": 3, "phase": "hand", "seed": "JYZLZ1JC", "result": null}
+{"time": "2026-10-09 16:29:52", "cmd": "discard", "args": [2, 3, 4, 5], "desc": "discard K♥ 8♥ 6♦(mult) 5♣", "ok": true, "ante": 3, "phase": "hand", "seed": "JYZLZ1JC", "result": null}
+{"time": "2026-10-09 16:30:05", "cmd": "discard", "args": [2, 3], "desc": "discard J♣ 8♠", "ok": true, "ante": 3, "phase": "hand", "seed": "JYZLZ1JC", "result": null}
+{"time": "2026-10-09 16:30:12", "cmd": "discard", "args": [2, 3], "desc": "discard 10♣ 9♠", "ok": true, "ante": 3, "phase": "hand", "seed": "JYZLZ1JC", "result": null}
+{"time": "2026-10-09 16:30:25", "cmd": "play", "args": [0, 2, 3, 5, 7], "desc": "play A♠ 5♥ 4♥ 3♦ 2♦", "ok": true, "ante": 3, "phase": "hand", "seed": "JYZLZ1JC", "result": null}
+{"time": "2026-10-09 16:30:38", "cmd": "play", "args": [0, 3, 4, 5, 6], "desc": "play A♣ 5♦ 4♦ 3♠ 2♠", "ok": true, "ante": 3, "phase": "hand", "seed": "JYZLZ1JC", "result": null}
+{"time": "2026-10-09 16:30:52", "cmd": "do", "args": [1, "Mystic"], "desc": "buy joker Mystic Summit $5", "ok": true, "ante": 3, "phase": "shop", "seed": "JYZLZ1JC", "result": null}
+{"time": "2026-10-09 16:31:03", "cmd": "do", "args": [10, "leave"], "desc": "leave shop", "ok": true, "ante": 3, "phase": "shop", "seed": "JYZLZ1JC", "result": null}
+{"time": "2026-10-09 16:31:06", "cmd": "do", "args": [1, "skip"], "desc": "skip this blind for the tag", "ok": true, "ante": 3, "phase": "blind", "seed": "JYZLZ1JC", "result": null}
+{"time": "2026-10-09 16:31:15", "cmd": "do", "args": [4, "Saturn"], "desc": "take planet Saturn (+Straight)", "ok": true, "ante": 3, "phase": "pack", "seed": "JYZLZ1JC", "result": null}
+{"time": "2026-10-09 16:31:21", "cmd": "do", "args": [0, "Mercury"], "desc": "take planet Mercury (+Pair)", "ok": true, "ante": 3, "phase": "pack", "seed": "JYZLZ1JC", "result": null}
+{"time": "2026-10-09 16:31:34", "cmd": "do", "args": [0, "play"], "desc": "play this blind", "ok": true, "ante": 3, "phase": "blind", "seed": "JYZLZ1JC", "result": null}
+{"time": "2026-10-09 16:31:48", "cmd": "use", "args": [0, 4], "desc": "use c_justice on 6♥", "ok": true, "ante": 3, "phase": "hand", "seed": "JYZLZ1JC", "result": null}
+{"time": "2026-10-09 16:31:55", "cmd": "discard", "args": [0, 1, 2, 3], "desc": "discard A♠(debuffed) K♠(debuffed) Q♣ 9♠(debuffed)", "ok": true, "ante": 3, "phase": "hand", "seed": "JYZLZ1JC", "result": null}
+{"time": "2026-10-09 16:32:06", "cmd": "discard", "args": [0], "desc": "discard K♦", "ok": true, "ante": 3, "phase": "hand", "seed": "JYZLZ1JC", "result": null}
+{"time": "2026-10-09 16:32:12", "cmd": "discard", "args": [1], "desc": "discard 10♠(debuffed)", "ok": true, "ante": 3, "phase": "hand", "seed": "JYZLZ1JC", "result": null}
+{"time": "2026-10-09 16:32:17", "cmd": "discard", "args": [0], "desc": "discard A♣", "ok": true, "ante": 3, "phase": "hand", "seed": "JYZLZ1JC", "result": null}
+{"time": "2026-10-09 16:32:28", "cmd": "play", "args": [1, 3, 4, 6, 7], "desc": "play 8♣ 7♣ 6♥(glass) 5♠(debuffed) 4♣", "ok": true, "ante": 3, "phase": "hand", "seed": "JYZLZ1JC", "result": null}
+{"time": "2026-10-09 16:32:45", "cmd": "do", "args": [3, "Celestial"], "desc": "buy booster Celestial Pack $4", "ok": true, "ante": 4, "phase": "shop", "seed": "JYZLZ1JC", "result": null}
+{"time": "2026-10-09 16:32:53", "cmd": "do", "args": [1, "Saturn"], "desc": "take planet Saturn (+Straight)", "ok": true, "ante": 4, "phase": "pack", "seed": "JYZLZ1JC", "result": null}
+{"time": "2026-10-09 16:32:59", "cmd": "do", "args": [9, "Fool"], "desc": "use The Fool", "ok": true, "ante": 4, "phase": "shop", "seed": "JYZLZ1JC", "result": null}
+{"time": "2026-10-09 16:33:05", "cmd": "do", "args": [9, "Saturn"], "desc": "use Saturn", "ok": true, "ante": 4, "phase": "shop", "seed": "JYZLZ1JC", "result": null}
+{"time": "2026-10-09 16:33:16", "cmd": "do", "args": [1, "Paint"], "desc": "buy voucher Paint Brush $10", "ok": true, "ante": 4, "phase": "shop", "seed": "JYZLZ1JC", "result": null}
+{"time": "2026-10-09 16:33:21", "cmd": "do", "args": [8, "leave"], "desc": "leave shop", "ok": true, "ante": 4, "phase": "shop", "seed": "JYZLZ1JC", "result": null}
+{"time": "2026-10-09 16:33:34", "cmd": "do", "args": [0, "play"], "desc": "play this blind", "ok": true, "ante": 4, "phase": "blind", "seed": "JYZLZ1JC", "result": null}
+{"time": "2026-10-09 16:33:48", "cmd": "discard", "args": [1, 2, 3, 4, 6], "desc": "discard K♠ K♥ Q♥ Q♣ 5♣", "ok": true, "ante": 4, "phase": "hand", "seed": "JYZLZ1JC", "result": null}
+{"time": "2026-10-09 16:34:03", "cmd": "discard", "args": [1, 2, 3, 6], "desc": "discard J♦ 10♦ 9♣ 4♥", "ok": true, "ante": 4, "phase": "hand", "seed": "JYZLZ1JC", "result": null}
+{"time": "2026-10-09 16:34:12", "cmd": "discard", "args": [0, 2, 4], "desc": "discard A♣ J♣ 6♣", "ok": true, "ante": 4, "phase": "hand", "seed": "JYZLZ1JC", "result": null}
+{"time": "2026-10-09 16:34:22", "cmd": "discard", "args": [1, 2, 6], "desc": "discard Q♠ 8♣ 4♠", "ok": true, "ante": 4, "phase": "hand", "seed": "JYZLZ1JC", "result": null}
+{"time": "2026-10-09 16:34:37", "cmd": "play", "args": [0, 3, 4, 6, 7], "desc": "play A♦ 8♦(mult) 6♦(mult) 5♦ 4♦", "ok": true, "ante": 4, "phase": "hand", "seed": "JYZLZ1JC", "result": null}
+{"time": "2026-10-09 16:34:49", "cmd": "play", "args": [1, 2, 3, 4], "desc": "play 10♠ 10♥ 8♠ 8♥", "ok": true, "ante": 4, "phase": "hand", "seed": "JYZLZ1JC", "result": null}
+{"time": "2026-10-09 16:35:05", "cmd": "do", "args": [1, "Jumbo"], "desc": "buy booster Jumbo Celestial Pack $6", "ok": true, "ante": 4, "phase": "shop", "seed": "JYZLZ1JC", "result": null}
