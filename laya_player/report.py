@@ -159,6 +159,7 @@ def rl_curve(its: list[dict]) -> None:
 
 
 STAGE3_FIRST = 66
+HUNT_START = "2026-10-09 11:55"  # v1.3: raw0056 plays real Balatro until it wins, every run recorded
 # restarts that changed the code rather than the arguments (runs/stage3_n8.log has the times)
 STAGE3_CODE = {"2026-10-07 22:28": "sim fix: Marble stone", "2026-10-08 01:13": "paused 23:03, resumed",
                "2026-10-08 07:27": "sim fix: Mr. Bones payout", "2026-10-08 10:25": "sim fix: suit tiebreak"}
@@ -340,7 +341,8 @@ def stage1(rt: list[dict]) -> list[str]:
 
 
 def stage2(rt: list[dict]) -> list[str]:
-    its = rows(ROOT / "runs_sim" / "iters.jsonl")
+    its = [r for r in rows(ROOT / "runs_sim" / "iters.jsonl") if r["iter"] < STAGE3_FIRST]
+    rt = [r for r in rt if not r["ckpt"].endswith("+calc") and r["time"] < HUNT_START]
     ev = ROOT / "runs" / "raw_init_eval.json"
     md = ["## Stage 2 (v1.1+): raw clicks, pure RL\n",
           "Laya clicks like a player (`select K♥` ... `play selected`): one choice question per click, several "
@@ -392,11 +394,124 @@ def stage2(rt: list[dict]) -> list[str]:
     return md
 
 
+def _real_table(rt: list[dict], cks: list[str]) -> list[str]:
+    md = ["| checkpoint | runs | mean rounds | best | mean ante | wins | sim twin identical |", "|---|---|---|---|---|---|---|"]
+    for ck in cks:
+        rs = [r for r in rt if r["ckpt"] == ck and r["real_outcome"] in ("won", "lost")]
+        if not rs:
+            continue
+        m = [r for r in rs if r["sim_rounds"] is not None]
+        md.append(f"| {ck} | {len(rs)} | {st.mean(r['real_rounds'] for r in rs):.2f} | {max(r['real_rounds'] for r in rs)} | "
+                  f"{st.mean(r['real_ante'] for r in rs):.1f} | {sum(r['real_outcome'] == 'won' for r in rs)} | "
+                  f"{sum(r['sim_rounds'] == r['real_rounds'] for r in m)}/{len(m)} |")
+    return md
+
+
+def hunt(rt: list[dict]) -> list[str]:
+    rs = [r for r in rt if r["time"] >= HUNT_START and r["real_outcome"] in ("won", "lost")]
+    if not rs:
+        return []
+    won = [r for r in rs if r["real_outcome"] == "won"]
+    md = ["## v1.3: playing real Balatro until a win\n",
+          f"The best simulator checkpoint, raw0056 (Stage 2; no computed notes), played real Balatro on random seeds, "
+          f"greedy, with every run screen-recorded. {len(rs)} runs, mean {st.mean(r['real_rounds'] for r in rs):.2f} "
+          f"rounds, best {max(r['real_rounds'] for r in rs)}, {len(won)} won."]
+    for r in won:
+        md.append(f"\n**Win**: seed {r['seed']}, run {rs.index(r) + 1} of the hunt, beat Ante 8 "
+                  f"({r['real_rounds']} rounds incl. endless; simulator twin {r['sim_rounds']}). Video: "
+                  f"`media/laya_balatro_win_{r['seed']}.mp4` on Hugging Face.\n")
+    hist = [r["real_rounds"] for r in rs]
+    bins = [(0, 2), (3, 5), (6, 8), (9, 11), (12, 14), (15, 17), (18, 23), (24, 99)]
+    md += ["", "| rounds won | 0–2 | 3–5 | 6–8 | 9–11 | 12–14 | 15–17 | 18–23 | 24+ (win) |",
+           "|---|---|---|---|---|---|---|---|---|",
+           "| runs | " + " | ".join(str(sum(lo <= x <= hi for x in hist)) for lo, hi in bins) + " |", ""]
+    return md
+
+
+API_FILES = [("TypeSafe Jev 1.13", "api_typesafe_jev-1.13.jsonl"),
+             ("Jev 1.13 + computed notes", "api_typesafe_jev-1.13+calc.jsonl"),
+             ("OpenAI GPT-6 Luna Decisions", "api_openai_gpt-6-luna-decisions.jsonl")]
+
+
+def decision_apis(n: int = 64) -> list[str]:
+    if not all((ROOT / "runs" / f).exists() for _, f in API_FILES):
+        return []
+    decision_models_chart(n)
+    seeds = json.loads((ROOT / "runs" / "ladder.json").read_text())["seeds"][:n]
+    md = ["## Hosted decision APIs, zero-shot (v1.3)\n",
+          "OpenRouter's decisions endpoint (`POST /api/alpha/decisions`) takes a state string and a choice question and "
+          "returns a probability per option, the same contract as Laya. Each API model played the same raw-click "
+          "interface in the simulator (argmax of the returned probabilities, Red Deck / White Stake):\n",
+          "![decision models](decision_models.png)\n",
+          f"| player (first {n} ladder seeds) | mean rounds | median | best | wins | clicks | errors | API cost |",
+          "|---|---|---|---|---|---|---|---|"]
+    lad = json.loads((ROOT / "runs" / "ladder.json").read_text())["results"]
+    for name in ("raw_init", "raw0056"):
+        r = lad[name]["rounds"][:n]
+        md.append(f"| Laya {name} | {st.mean(r):.2f} | {st.median(r)} | {max(r)} | {sum(lad[name]['won'][:n])} | – | – | – |")
+    for name, f in API_FILES:
+        by = {r["seed"]: r for r in rows(ROOT / "runs" / f)}
+        rs = [by[x] for x in seeds]
+        r = [x["rounds"] for x in rs]
+        md.append(f"| {name} | {st.mean(r):.2f} | {st.median(r)} | {max(r)} | {sum(x['won'] for x in rs)} | "
+                  f"{sum(x['calls'] for x in rs):,} | {sum(x['errors'] for x in rs)} | ${sum(x['cost'] for x in rs):.3f} |")
+    md += ["\nThe API models mostly lose in Ante 1: GPT-6 Luna Decisions skipped the very first blind in 34 of 62 "
+           "traced games, and the models play single cards. It reached 13 rounds on one seed (BXEMK4GS). On that seed in "
+           "real Balatro, whose boss draws differ from jackdaw's, it reached 5 rounds, Laya raw0056 11 and Jev 2 "
+           "(side-by-side video `media/compare_BXEMK4GS.mp4`).\n"]
+    return md
+
+
+def stage4() -> list[str]:
+    tj = rows(ROOT / "runs_teach" / "teach.jsonl")
+    if not tj:
+        return []
+    m = re.search(r"start (\S+): (\d+) train clicks.*?'all': ([\d.]+)\}; ladder \S+ ([\d.]+)",
+                  (ROOT / "runs_teach" / "teach.log").read_text(encoding="utf8"))
+    md = ["## Stage 4 (v1.3, aborted): imitate the teacher once more\n",
+          f"From {m[1]} without notes, imitation of the HF teacher's clicks ({int(m[2]):,} train clicks; 100 held-out "
+          f"games), in chunks of 100k clicks, with the 128-seed ladder after each chunk. Before: agreement "
+          f"{float(m[3]):.1%}, ladder {float(m[4]):.2f}.\n",
+          "| chunk | teacher clicks | agreement (held out) | ladder (128 seeds) | median |", "|---|---|---|---|---|"]
+    md += [f"| {r['chunk']} | {r['clicks']:,} | {r['agree']['all']:.1%} | {r['ladder']:.2f} | {r['ladder_median']} |"
+           for r in tj]
+    md.append("\nCloser imitation, worse play, as in Stage 1. Stopped after chunk 5.\n")
+    return md
+
+
+def stage3(rt: list[dict]) -> list[str]:
+    its = [r for r in rows(ROOT / "runs_sim" / "iters.jsonl") if r["iter"] >= STAGE3_FIRST]
+    if not its:
+        return []
+    stage3_curve()
+    base = st.mean(json.loads((ROOT / "runs" / "ladder.json").read_text())["results"]["raw0056"]["rounds"])
+    md = ["## Stage 3 (v1.3): computed consequences in the click options\n",
+          "With `LAYA_CALC=1` each click option carries what it would do, computed and never advised: the exact score "
+          "of the selected cards (jackdaw's own scoring on copies of the cards) and the odds of completing a flush or "
+          "straight on the next draw. In real Balatro a lockstep simulator twin replays the run to compute the same "
+          "notes. Training resumed from raw0056 (no new kickoff), pure RL as in Stage 2.\n",
+          f"{len(its)} iterations ({its[0]['iter']}–{its[-1]['iter']}), champion **{its[-1]['champion']}**.\n",
+          "![stage 3](stage3_rl.png)\n",
+          f"Every champion on the same 128 fixed seeds, with notes (raw0056 without notes: {base:.2f}):\n",
+          "| checkpoint | mean rounds | median |", "|---|---|---|"]
+    for f in [ROOT / "runs" / "ladder_calc.json"] + sorted((ROOT / "runs").glob("ladder_raw*_calc.json")):
+        name, r = next(iter(json.loads(f.read_text())["results"].items()))
+        md.append(f"| {name} | {st.mean(r['rounds']):.2f} | {st.median(r['rounds'])} |")
+    s3 = [r for r in rt if r["ckpt"].endswith("+calc") and r["real_outcome"] in ("won", "lost")]
+    full = sum(1 for r in s3 if r.get("notes") and len(set(r["notes"].split("/"))) == 1)
+    md += [f"\nReal Balatro with notes: {len(s3)} runs, mean {st.mean(r['real_rounds'] for r in s3):.2f} rounds, "
+           f"best {max(r['real_rounds'] for r in s3)}; the twin computed notes for every move in {full}/{len(s3)} runs.\n"]
+    md += _real_table(rt, list(dict.fromkeys(r["ckpt"] for r in s3)))
+    md.append("\nNo champion with notes beat raw0056 without them on the fixed seeds.\n")
+    return md
+
+
 def main():
     OUT.mkdir(exist_ok=True)
     rt = rows(ROOT / "runs" / "real_test.jsonl")
     ver = (ROOT / "VERSION").read_text().strip() if (ROOT / "VERSION").exists() else "?"
-    md = [f"# Laya plays Balatro: results (v{ver})\n"] + stage2(rt) + stage1(rt)
+    md = ([f"# Laya plays Balatro: results (v{ver})\n"] + hunt(rt) + decision_apis() + stage4() + stage3(rt)
+          + stage2(rt) + stage1(rt))
     (OUT / "REPORT.md").write_text("\n".join(md) + "\n", encoding="utf8")
     print("\n".join(md))
 
