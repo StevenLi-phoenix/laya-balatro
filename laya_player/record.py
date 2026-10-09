@@ -60,7 +60,7 @@ class GameWindow:
         self.g, self.c = win32gui, win32con
         self.h = win32gui.FindWindow(None, "Balatro")
         if not self.h:
-            raise RuntimeError("Balatro window not found")
+            raise OSError("Balatro window not found")  # realloop treats it as a lost game
         self.orig = win32gui.GetWindowRect(self.h)
 
     def __enter__(self):
@@ -74,7 +74,55 @@ class GameWindow:
 
     def __exit__(self, *exc):
         l, t, r, b = self.orig
-        self.g.SetWindowPos(self.h, self.c.HWND_NOTOPMOST, l, t, r - l, b - t, self.c.SWP_SHOWWINDOW)
+        try:
+            self.g.SetWindowPos(self.h, self.c.HWND_NOTOPMOST, l, t, r - l, b - t, self.c.SWP_SHOWWINDOW)
+        except self.g.error:  # the game crashed and its window is gone
+            pass
+
+
+def start_capture(region: tuple, raw: Path, lag: float = 0.5) -> tuple[subprocess.Popen, float]:
+    """ffmpeg desktop-duplication capture of `region` into `raw`; returns the process and the time
+    of its first frame (~`lag` after launch). Stop it with `stop_capture`."""
+    x, y, w, h = region
+    ff = subprocess.Popen(["ffmpeg", "-loglevel", "error", "-y", "-f", "lavfi", "-i",
+                           f"ddagrab=output_idx=0:framerate=30:offset_x={x}:offset_y={y}:video_size={w}x{h}",
+                           "-vf", "hwdownload,format=bgra,format=yuv420p", "-c:v", "libx264", "-preset",
+                           "ultrafast", str(raw)], stdin=subprocess.PIPE)
+    return ff, time.time() + lag
+
+
+def stop_capture(ff: subprocess.Popen) -> None:
+    try:
+        ff.communicate(b"q", timeout=60)
+    except (subprocess.TimeoutExpired, ValueError):
+        ff.kill()
+
+
+def render(raw: Path, decisions: list[dict], t0: float, speed: float, out: Path, who: str, title: str,
+           end: float | None = None) -> int:
+    """Speed up `raw`, burn in `title` and the decision captions; `end` cuts the raw capture at
+    that many seconds. Returns the caption count."""
+    srt = out.with_suffix(".srt")
+    n = build_srt(decisions, t0, speed, srt, who)
+    title = title.replace(":", r"\:").replace("'", "")
+    # Windows ffmpeg builds have no fontconfig default: name the font file / folder explicitly
+    # (without them drawtext crashes with an access violation).
+    fonts = r"C\:/Windows/Fonts"
+    vf = (f"setpts=PTS/{speed},scale=1280:-2,"
+          f"drawtext=fontfile='{fonts}/arial.ttf':text='{title}':x=12:y=10:fontsize=20:fontcolor=white:box=1:"
+          f"boxcolor=black@0.55:boxborderw=6,"
+          f"subtitles={srt.name}:fontsdir='{fonts}':force_style='FontName=Segoe UI Symbol,FontSize=15,Alignment=2,"
+          f"BorderStyle=3,Outline=1,BackColour=&H90000000,MarginV=24'")
+    cut = ["-t", f"{end:.2f}"] if end else []
+    subprocess.run(["ffmpeg", "-loglevel", "error", "-y", *cut, "-i", str(raw.resolve()), "-vf", vf, "-r", "30",
+                    "-an", "-c:v", "libx264", "-crf", "23", "-pix_fmt", "yuv420p", out.name], check=True, cwd=out.parent)
+    return n
+
+
+def still(raw: Path, at: float, out: Path) -> None:
+    """One full-resolution frame of `raw` at `at` seconds (a cover image)."""
+    subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-ss", f"{at:.2f}", "-i", str(raw), "-frames:v", "1",
+                    str(out)], check=True)
 
 
 def main():
@@ -92,7 +140,7 @@ def main():
 
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
-    raw, srt = out.with_suffix(".raw.mp4"), out.with_suffix(".srt")
+    raw = out.with_suffix(".raw.mp4")
     if args.api:
         from .apiplay import ApiPolicy
         ck, pol = args.api, ApiPolicy(args.api)
@@ -109,32 +157,17 @@ def main():
                                   greedy=True, temperature=0.3)
     run_id = f"video_{Path(ck).stem.replace('/', '_')}_{args.seed}_{time.strftime('%m%d_%H%M%S')}"
     with GameWindow() as win:
-        x, y, w, h = win.region
-        ff = subprocess.Popen(["ffmpeg", "-loglevel", "error", "-y", "-f", "lavfi", "-i",
-                               f"ddagrab=output_idx=0:framerate=30:offset_x={x}:offset_y={y}:video_size={w}x{h}",
-                               "-vf", "hwdownload,format=bgra,format=yuv420p", "-c:v", "libx264", "-preset",
-                               "ultrafast", str(raw)], stdin=subprocess.PIPE)
-        t0 = time.time() + args.capture_lag  # first captured frame ~ when ffmpeg is up
+        ff, t0 = start_capture(win.region, raw, args.capture_lag)
         time.sleep(1)
         try:
             summary, _ = evolve.play_run(b, pol, -1, run_id, run_args)
             time.sleep(4)  # keep the game-over screen
         finally:
-            ff.communicate(b"q", timeout=60)
+            stop_capture(ff)
     decisions = [json.loads(l) for l in open(evolve.RUNS / "decisions" / f"{run_id}.jsonl", encoding="utf8")]
-    n = build_srt(decisions, t0, args.speed, srt, who)
     title = ((f"Laya (421M ModernBERT decision model) plays Balatro - {Path(ck).stem}" if not args.api else
-              f"{who} plays Balatro") + f", seed {summary.get('seed')}, {args.speed:g}x speed").replace(":", r"\:").replace("'", "")
-    # Windows ffmpeg builds have no fontconfig default: name the font file / folder explicitly
-    # (without them drawtext crashes with an access violation).
-    fonts = r"C\:/Windows/Fonts"
-    vf = (f"setpts=PTS/{args.speed},scale=1280:-2,"
-          f"drawtext=fontfile='{fonts}/arial.ttf':text='{title}':x=12:y=10:fontsize=20:fontcolor=white:box=1:"
-          f"boxcolor=black@0.55:boxborderw=6,"
-          f"subtitles={srt.name}:fontsdir='{fonts}':force_style='FontName=Segoe UI Symbol,FontSize=15,Alignment=2,"
-          f"BorderStyle=3,Outline=1,BackColour=&H90000000,MarginV=24'")
-    subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-i", raw.name, "-vf", vf, "-r", "30", "-an",
-                    "-c:v", "libx264", "-crf", "23", "-pix_fmt", "yuv420p", out.name], check=True, cwd=out.parent)
+              f"{who} plays Balatro") + f", seed {summary.get('seed')}, {args.speed:g}x speed")
+    n = render(raw, decisions, t0, args.speed, out, who, title)
     print(f"{out}: {summary['rounds_won']} rounds, ante {summary['max_ante']}, {summary['outcome']}; {n} subtitles"
           + (f"; API cost ${pol.cost:.4f}" if args.api else ""))
 

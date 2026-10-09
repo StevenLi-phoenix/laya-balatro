@@ -99,7 +99,7 @@ def play_run(b: Bridge, pol, gen: int, run_id: str, args) -> dict:
     counted_round = -1
     run_seed = None
     bosses: dict[int, str] = {}
-    won = False
+    won, won_at = False, None
     busy = streak = 0
     tries: dict = {}
     sel_ids: list = []  # raw mode: ids of hand cards clicked in this decision
@@ -120,8 +120,9 @@ def play_run(b: Bridge, pol, gen: int, run_id: str, args) -> dict:
                 if bl.get("slot") == "Boss" and bl.get("blind_id"):
                     bosses[p.get("ante") or 1] = bl["blind_id"]
         if p.get("won") and not won:
-            won = True
+            won, won_at = True, time.time()
             log(f"*** RUN WON at ante {max_ante} ({rounds_won} rounds) -- continuing into endless")
+            time.sleep(getattr(args, "hold_win", 0))  # recording: keep the win screen on camera
         if p.get("won") and p.get("overlay_open"):
             try:
                 b.call("endless_mode")  # dismiss the win overlay: keep playing past ante 8
@@ -270,7 +271,7 @@ def play_run(b: Bridge, pol, gen: int, run_id: str, args) -> dict:
         else:
             log(f"[g{gen} a{s['ante']} {s['phase']}] -> {opts[idx]} (p={probs[idx]:.2f})")
     dec_f.close()
-    return {"gen": gen, "run": run_id, "ckpt": pol.ckpt, "outcome": outcome, "won": won, "seed": run_seed, "bosses": [bosses[a] for a in sorted(bosses)], "rounds_won": rounds_won,
+    return {"gen": gen, "run": run_id, "ckpt": pol.ckpt, "outcome": outcome, "won": won, "won_at": won_at, "seed": run_seed, "bosses": [bosses[a] for a in sorted(bosses)], "rounds_won": rounds_won,
             "max_ante": max_ante, "decisions": len(decisions), "invalid": invalid, "best_hand": best_hand,
             "notes": (f"{twin.synced}/{twin.calls}" if twin else None), "twin_lost": (twin.lost if twin else None),
             "twin_repairs": (twin.repairs if twin else None),
