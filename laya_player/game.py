@@ -442,12 +442,14 @@ def combo_candidates(state: dict) -> list[dict]:
     if ph == "shop":
         out = []
         money = state.get("money", 0)
+        if any(j.get("key") == "j_credit_card" for j in state.get("jokers", [])):
+            money += 20  # Credit Card lets the shop go to -$20
         njok = len(state.get("jokers", []))
         ncons = len(state.get("consumables", []))
         for i, it in enumerate(state.get("shop", [])):
             if it.get("cost", 0) > money:
                 continue
-            if it["kind"] == "joker" and njok >= state.get("joker_slots", 5):
+            if it["kind"] == "joker" and njok >= state.get("joker_slots", 5) and it.get("ed") != "negative":
                 continue
             if it["kind"] in ("tarot", "planet", "spectral") and ncons >= state.get("consumable_slots", 2):
                 continue
@@ -503,7 +505,8 @@ def item_str(it: dict) -> str:
     if it.get("key") in PLANETS:
         name += f" (+{PLANETS[it['key']]})"
     ed = f" {it['ed']}" if it.get("ed") else ""
-    return f"{it['kind']} {name}{ed}"
+    st = "".join(f" [{x}]" for x in it.get("stickers") or [])  # eternal/perishable/rental (higher stakes)
+    return f"{it['kind']} {name}{ed}{st}"
 
 
 def action_text(state: dict, a: dict) -> str:

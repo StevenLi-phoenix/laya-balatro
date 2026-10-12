@@ -7,10 +7,10 @@ directly, Red Deck / White Stake, random seeds, through the same mod bridge and 
 
 ## How to play
 
-`laya_player/claude_cli.py` (run from laya-player with `PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe -m laya_player.claude_cli ...`):
+`./bal <command>` (wrapper for `python -m laya_player.claude_cli`):
 `show` · `play i j ..` / `discard i j ..` (hand indices) · `do N <text>` (always pass the expected option text:
 options re-index after every action; the guard refuses a mismatch) · `use SLOT targets..` · `pick N targets..` ·
-`jokers <new slot order>` · `new [SEED]`. Moves log: `runs_claude/moves.jsonl`; finished runs: `runs_claude/runs.jsonl`.
+`jokers <new slot order>` · `new [SEED] | deck=.. stake=.. model=.. effort=..` · `report [model]` · `annotate tokens=N`. Moves log: `runs_claude/moves.jsonl`; finished runs: `runs_claude/runs.jsonl`.
 Never chain two `do` commands without a `show` in between (run 1 bought Seed Money by accident that way).
 
 ## Run 1 — seed JYZLZ1JC: WON (2026-10-09)
@@ -25,6 +25,12 @@ The game was left on the win overlay (endless not entered).
 Laya on random real seeds: 1 win in 541 raw-click runs before v1.3; raw0056 9 runs mean 4.89 rounds; with computed
 notes 256 runs mean 5.78, best 22. Its recorded win (UP2YINZS) was a simulator-screened seed (0.12% sim win rate).
 Claude: 1 random seed, 1 win. n = 1, not a win rate.
+
+## All-modes campaign (2026-10-10)
+
+Sub-agents (Haiku/Sonnet) play one run each; results, per-mode table and plan are in [MODES.md](MODES.md), the agent
+brief in [PLAYER.md](PLAYER.md). Launch prompt for an agent: "Read PLAYER.md, play one run: deck=b_x stake=1 model=haiku effort=high".
+Logs are tagged per run/model/effort; compare models with `./bal report model`. Run 2 (M31Z2DGN) was overwritten by the campaign.
 
 ## Next
 

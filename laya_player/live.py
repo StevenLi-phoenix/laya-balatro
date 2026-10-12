@@ -61,7 +61,8 @@ def _item(x: dict) -> dict:
     if kind == "playing_card":
         return {"id": x.get("card_id"), "kind": "card", "card": _card(x), "cost": x.get("cost", 0)}
     it = {"id": x.get("card_id"), "kind": kind if kind != "consumable" else "tarot", "key": x.get("entity_id"),
-          "cost": x.get("cost", 0), "ed": x.get("edition"), "usable": x.get("usable", True)}
+          "cost": x.get("cost", 0), "ed": x.get("edition"), "usable": x.get("usable", True),
+          "stickers": x.get("stickers")}
     if x.get("usable") is False and it["key"] not in game.TARGETS:  # untargeted pack card the game greys out
         it["blocked"] = True
     return it
