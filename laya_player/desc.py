@@ -143,13 +143,23 @@ def _py(expr: str) -> str:
     e = e.replace("math.max", "max").replace("math.min", "min")
     e = re.sub(r"SMODS\.get_probability_vars\(self,\s*([^,]+),\s*([^,]+),[^)]*\)", r"__p(\1, \2)", e)
     e = re.sub(r"localize\(([^,()]+(?:\([^()]*\))?),\s*'[^']*'\)", r"\1", e)
+    # localize{type = 'variable', key = (cond and 'a' or 'b'), vars = {x}} (Loyalty Card's countdown)
+    e = re.sub(r"localize\{type = 'variable', key = \((.+?) and '(\w+)' or '(\w+)'\), vars = \{([^{}]*)\}\}",
+               r"(__v('\2', \4) if (\1) else __v('\3', \4))", e)
     e = re.sub(r"localize\{[^}]*\}", "None", e)
     return e
 
 
+def _variable(key: str, *vals) -> str:
+    """misc.v_dictionary text, e.g. loyalty_inactive = "#1# remaining"."""
+    m = re.search(rf'\b{key}\s*=\s*"([^"]*)"', (DATA / "en-us.lua").read_text(encoding="utf8"))
+    txt = m.group(1) if m else key
+    return re.sub(r"#(\d+)#", lambda g: _fmt(vals[int(g.group(1)) - 1]) if int(g.group(1)) <= len(vals) else "?", txt)
+
+
 def _eval(expr: str, ability: dict):
     ns = {"A": _Dot(ability), "G": _G(), "floor": math.floor, "max": max, "min": min,
-          "__p": lambda a, b: (a, b), "nil": None, "true": True, "false": False}
+          "__p": lambda a, b: (a, b), "__v": _variable, "nil": None, "true": True, "false": False}
     try:
         v = eval(_py(expr), {"__builtins__": {}}, ns)  # noqa: S307 -- expressions come from the game's own source
     except Exception:  # unparseable or depends on live G state
