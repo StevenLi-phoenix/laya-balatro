@@ -431,6 +431,8 @@ def combo_candidates(state: dict) -> list[dict]:
         out = [{"t": "select_blind"}]
         if state.get("can_skip"):
             out.append({"t": "skip_blind"})
+        if state.get("can_reroll_boss"):
+            out.append({"t": "reroll_boss"})
         return out
     if ph == "hand":
         out = []
@@ -515,6 +517,8 @@ def action_text(state: dict, a: dict) -> str:
         return "play this blind"
     if t == "skip_blind":
         return "skip this blind for the tag"
+    if t == "reroll_boss":
+        return "reroll the boss blind ($10)"
     if a.get("raw"):
         from .desc import name_of
         note = f" → {a['note']}" if a.get("note") else ""  # computed consequence (calc.py, Stage 3)

@@ -32,7 +32,10 @@ def _live_desc(j: dict) -> str:
     the same code the simulator uses (the game's own text follows the player's language)."""
     from .desc import describe
     ab = j.get("ability")
-    return describe(j.get("entity_id"), ab if isinstance(ab, dict) else None)
+    out = describe(j.get("entity_id"), ab if isinstance(ab, dict) else None)
+    if "?" in out and j.get("live_description"):  # values from live G state (Ancient Joker's suit, ...)
+        out += f" [game text: {j['live_description']}]"
+    return out
 
 
 def _deck_counts(p: dict) -> dict | None:
@@ -103,6 +106,7 @@ def canonical(p: dict) -> dict | None:
                         "tag": (b.get("skip_reward") or {}).get("entity_id")}
                        for b in bl if b.get("slot") in order[start:]]
         s["can_skip"] = "skip_blind" in (p.get("legal_actions") or [])
+        s["can_reroll_boss"] = "reroll_boss" in (p.get("legal_actions") or [])  # Director's Cut / Retcon
     if phase == "shop":
         sh = p.get("shop") or {}
         s["shop"] = [_item(x) for x in (sh.get("cards") or []) + (sh.get("vouchers") or []) + (sh.get("boosters") or [])]
@@ -137,6 +141,8 @@ def execute(b: Bridge, s: dict, a: dict) -> dict:
         return b.call("select_blind")
     if t == "skip_blind":
         return b.call("skip_blind")
+    if t == "reroll_boss":
+        return b.call("reroll_boss")
     if t in ("play", "discard"):
         b.call("select_hand_cards", {"card_ids": hand_ids(a["cards"])})
         return b.call("play_hand" if t == "play" else "discard_hand")
