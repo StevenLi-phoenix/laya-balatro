@@ -33,8 +33,11 @@ def _live_desc(j: dict) -> str:
     from .desc import describe
     ab = j.get("ability")
     out = describe(j.get("entity_id"), ab if isinstance(ab, dict) else None)
-    if "?" in out and j.get("live_description"):  # values from live G state (Ancient Joker's suit, ...)
-        out += f" [game text: {j['live_description']}]"
+    game_text = j.get("live_description")
+    if isinstance(game_text, list):  # prose plus *badge* lines (mod state.lua rendered_rows_to_description)
+        game_text = " ".join(game_text)
+    if "?" in out and game_text:  # values from live G state (Ancient Joker's suit, ...)
+        out += f" [game text: {game_text}]"
     return out
 
 
@@ -87,9 +90,15 @@ def canonical(p: dict) -> dict | None:
     s["jokers"] = [{"id": j.get("card_id"), "key": j.get("entity_id"), "sell": j.get("sell_value"),
                     "ed": j.get("edition"), "eternal": "eternal" in (j.get("stickers") or []),
                     "desc": _live_desc(j)} for j in p.get("jokers") or []]
-    s["vouchers"] = list(p.get("used_vouchers") or [])
+    s["vouchers"] = [v["key"] if isinstance(v, dict) else v for v in p.get("used_vouchers") or []]
     s["deck_counts"] = _deck_counts(p)
-    s["consumables"] = [{"id": c.get("card_id"), "key": c.get("entity_id"), "usable": c.get("usable", True)}
+    # The mod reports the game's can_use_consumeable, which is false for a targeted card until
+    # its targets are highlighted; the targets come with the action, so judge those by hand size
+    # (as sim._usable does).
+    n_hand = len(p.get("hand") or [])
+    s["consumables"] = [{"id": c.get("card_id"), "key": c.get("entity_id"),
+                         "usable": n_hand >= game.MIN_TARGETS.get(c.get("entity_id"), 1)
+                         if c.get("entity_id") in game.TARGETS else c.get("usable", True)}
                         for c in p.get("consumables") or []]
     s["levels"] = {h["name"]: [h.get("level", 1), h.get("chips", 0), h.get("mult", 0)]
                    for h in p.get("hand_levels") or []}
@@ -179,13 +188,18 @@ def wait_stable(b: Bridge, timeout: float = 20.0) -> dict:
     p = b.state()["payload"]
     while time.time() < deadline:
         ph = p.get("phase")
+        if p.get("won") and p.get("overlay_open"):
+            return p  # the win overlay blocks input until the caller sends endless_mode
         hidden = ph == "SELECTING_HAND" and any(c.get("faced_down") for c in p.get("hand") or [])
         if hidden and time.time() < hidden_grace:
             time.sleep(0.25)
             p = b.state()["payload"]
             continue
         if ph not in TRANSIENT and not (ph == "SELECTING_HAND" and not p.get("hand")):
-            if ph != "BLIND_SELECT" or "select_blind" in (p.get("legal_actions") or []):
+            # decision_surface is set once the game takes input there (controller unlocked, shop
+            # slid in, buttons live); it is absent while any of that is pending.
+            decision = ph in ("SELECTING_HAND", "SHOP", "BLIND_SELECT") or ph in PACK_PHASES
+            if not decision or p.get("decision_surface"):
                 return p
         time.sleep(0.25)
         p = b.state()["payload"]

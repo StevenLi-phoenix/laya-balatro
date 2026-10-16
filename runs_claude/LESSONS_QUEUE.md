@@ -1,6 +1,7 @@
 # Lessons queue
 
-Merged into PLAYER.md on 2026-10-12 (two merges). Add new ones below.
+Merged into PLAYER.md on 2026-10-12 (two merges); challenge and Flushed lessons merged into its "Challenge notes" on
+2026-10-16. Add new ones below.
 - (Nebula Red #1) Telescope + main-hand planet: buy every Celestial pack (Pair L2 -> L10). Under The Eye / The Mouth with Acrobat: burn early hands with other types or 1-card plays, keep the main hand for the x3 last hand. One xMult + Acrobat reaches ~87k at the Ante 8 boss (100k): need a second real xMult by Ante 6.
 - (Nebula Red #2) Shortcut: each link may skip one rank (K-J-9-8-6 is a Straight). Spend on rerolls/Buffoon packs at Ante 3-4 to find the 2nd xMult rather than banking interest — both Nebula runs had $10-15 and no 2nd xMult late.
 - (Nebula Red WON) Telescope + Straight + Four Fingers (4-card straights) -> Straight L14 one-shots Ante 5-7 blinds. Baseball Card (x1.5 per uncommon joker) is a cheap 2nd multiplier. Crimson Heart disables a random joker per hand: burn early hands with 1-card plays, keep a 5-card straight for the Acrobat last hand.
@@ -12,3 +13,5 @@ Merged into PLAYER.md on 2026-10-12 (two merges). Add new ones below.
 - (Nebula Green #4) Telescope locks packs onto your MOST-PLAYED hand: if early play was Two Pair you get Uranus forever (weak). Decide the main hand (Straight/Flush/Full House) in Ante 1-2 and play it so Telescope feeds the right planet. Keep ~$10 from Ante 2 for xMult rerolls instead of a 3rd Uranus.
 - (Checkered Red WON) Checkered + Blackboard: play every heart (pair + heart kickers), hold only spades -> reliable x3. Red Card + buy-and-skip a $4 pack every shop reached +42 mult. Amber Acorn hides/shuffles jokers: set the order in the shop before the boss.
 - (Checkered Green #1) Green Ante 6 = 36k/54k/72k. Flush + flat jokers + Ramen caps ~10.6k; The Eye (72k) needs a 3rd strong hand type or unconditional xMult. The Club boss is free on Checkered. Loyalty Card now shows its countdown ("N remaining" / "Active!") in the joker text (tool fixed).
+- (Checkered Green #2) Card Sharp needs the SAME hand type: a straight-flush-shaped flush breaks it — play a non-straight flush. The Fish: save all discards for re-drawing face-up cards. Don't reroll away a joker you meant to buy; never sell a Negative joker to fund another. Garbage Tag pays per unused discard (skip Small with saved discards). Don't take Sigil on Checkered (adds a third suit).
+- (Checkered Green WON) Hologram + a Standard pack every shop (+X0.25 per added card) is the best cheap scaler on $0-Small stakes. Edition jokers (poly) give their xMult even if the joker never triggers: take free Polychrome-tag jokers. Investment Tag skip is fine before a boss (pays after it). Win formula held: 3 multipliers (Tribe, Hologram, poly) by Ante 4 + one hand type levelled to L8+.

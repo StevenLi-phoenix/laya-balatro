@@ -36,3 +36,11 @@ Logs are tagged per run/model/effort; compare models with `./bal report model`. 
 
 More random-seed runs (`new` with no seed) if the user wants a win rate. Remember: a forced Cerulean Bell card goes
 along with every discard; discard indices shift after every draw, so never loop discards with fixed indices.
+
+## Challenge campaign — ended 2026-10-16
+
+Rule Breaker: 15/20 challenges completed (profile 2), all 20 unlocked. 2026-10-16: 13 Sonnet runs on mod v0.2.6, 10 won
+(Medusa, Double or Nothing, Mad World, Inflation, Typecast, Monolith, Blast Off, Five-Card Draw, Knife's Edge, Bram
+Poker), 3 lost (Cruelty Ante 5, Golden Needle Ante 4, Non-Perishable Ante 8 boss Violet Vessel). Left: Non-Perishable,
+Fragile, Golden Needle, Cruelty, Jokerless. Rows in MODES.md; per-challenge tips in PLAYER.md "Challenge notes"; challenge
+rules in `balatro-agent/mcp/data/reference/challenges.md`. Launch: "Read PLAYER.md, play one run: challenge=c_x model=sonnet".

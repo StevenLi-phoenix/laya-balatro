@@ -140,7 +140,7 @@ laya_player/
   boss_order.json   the real game's boss pool order per ante (mod RPC boss_pool_order)
 run_stage2_n8.sh         Stage 2 on a Linux GPU box: kickoff imitation, then pure RL (simloop)
 run_stage3_n8.sh, run_stage4_n8.sh  Stages 3 and 4 on the GPU box
-mod/balatro-agent.patch  changes to the mod (seed/won/ability in state, shop-settle guard, go_to_menu, endless_mode)
+mod/balatro-agent.patch  changes on top of balatro-agent v0.2.6 (seed/won/ability in state, go_to_menu, endless_mode, read-only blind_order/boss_pool_order/debug_rng, juice-loop settle fix)
 runs/, runs_sim/, runs_claude/  logs and per-run results behind the report
 ```
 

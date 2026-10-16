@@ -1,7 +1,9 @@
-"""Direct JSON-RPC client for the balatro-agent Lua mod (bypasses the TS MCP server).
+r"""Direct JSON-RPC client for the balatro-agent Lua mod (bypasses the TS MCP server).
 
-The mod serves exactly one client on a named pipe (Windows) or AF_UNIX socket, speaking
-newline-delimited JSON-RPC 2.0. Close any MCP server that holds the pipe before connecting.
+Each game launch serves newline-delimited JSON-RPC 2.0 on its own endpoint
+(`\\.\pipe\balatro-mcp-<instance>` on Windows, `/tmp/balatro-mcp-<instance>.sock` elsewhere) and
+publishes a discovery record next to it (mod `src/instance.lua`). The pipe accepts several
+clients, so an MCP server may stay connected.
 """
 from __future__ import annotations
 
@@ -14,7 +16,41 @@ import select
 import time
 from typing import Any
 
-DEFAULT_SOCKET = r"\\.\pipe\balatro-mcp" if sys.platform == "win32" else "/tmp/balatro-mcp.sock"
+
+def _registry_prefixes() -> list[str]:
+    override = os.environ.get("BALATRO_BRIDGE_REGISTRY")
+    if override:
+        return [override]
+    if sys.platform != "win32":
+        return ["/tmp/balatro-mcp"]
+    # The game writes to its own %TEMP%; a sandboxed shell may point TEMP elsewhere.
+    temps = [os.environ.get("TEMP"), os.environ.get("TMP"),
+             os.path.join(os.environ.get("LOCALAPPDATA", ""), "Temp")]
+    return list(dict.fromkeys(os.path.join(t, "balatro-mcp") for t in temps if t))
+
+
+def discover() -> list[str]:
+    """Endpoints of published game instances, newest first. A record is
+    `<prefix>-<instance>` holding `id<TAB>endpoint<TAB>published_ms`, refreshed every second
+    while the game runs; a crashed game leaves its stale record behind."""
+    recs = set()
+    for prefix in _registry_prefixes():
+        folder, base = os.path.split(prefix)
+        try:
+            names = os.listdir(folder)
+        except OSError:
+            continue
+        for name in names:
+            if not name.startswith(base + "-") or name.endswith((".tmp", ".sock")):
+                continue
+            try:
+                with open(os.path.join(folder, name), encoding="utf8") as f:
+                    fields = f.read().strip().split("\t")
+            except OSError:
+                continue
+            if len(fields) >= 3 and fields[2].isdigit():
+                recs.add((int(fields[2]), fields[1]))
+    return [endpoint for _, endpoint in sorted(recs, reverse=True)]
 
 
 class BridgeError(RuntimeError):
@@ -25,26 +61,38 @@ class BridgeError(RuntimeError):
 
 class Bridge:
     def __init__(self, path: str | None = None, timeout: float = 30.0):
-        self.path = path or os.environ.get("BALATRO_BRIDGE_SOCKET", DEFAULT_SOCKET)
+        self.path = path
         self.timeout = timeout
         self._ids = itertools.count(1)
         self._open()
 
+    def _connect(self, endpoint: str) -> None:
+        if sys.platform == "win32":
+            self._f = open(endpoint, "r+b", buffering=0)
+        else:
+            s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            s.connect(endpoint)
+            self._f = s.makefile("rwb", buffering=0)
+        self.path = endpoint
+
     def _open(self) -> None:
+        """Connect to the given endpoint, else to the newest live instance; wait for one to appear."""
         deadline = time.time() + self.timeout
+        explicit = self.path
         while True:
-            try:
-                if sys.platform == "win32":
-                    self._f = open(self.path, "r+b", buffering=0)
-                else:
-                    s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-                    s.connect(self.path)
-                    self._f = s.makefile("rwb", buffering=0)
-                break
-            except OSError:
+            last: OSError = FileNotFoundError("no Balatro instance published a bridge endpoint")
+            for endpoint in [explicit] if explicit else discover():
+                try:
+                    self._connect(endpoint)
+                    break
+                except OSError as e:
+                    last = e
+            else:
                 if time.time() > deadline:
-                    raise
+                    raise last
                 time.sleep(0.5)
+                continue
+            break
         self._buf = b""
         self.info = self.call("connect")
 

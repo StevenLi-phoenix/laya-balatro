@@ -2,6 +2,24 @@
 
 Results tables and charts: [`README.md`](README.md), [`reports/REPORT.md`](reports/REPORT.md).
 
+## Unreleased — mod rebased onto balatro-agent v0.2.6 (2026-10-14)
+
+- **Upstream fixed the 8 s settle timeout** (Arcadi4/balatro-agent#24, v0.2.2): actions wait only for the events they
+  queued. Our background-event drain patch is dropped, and so are the shop-leave guard, Cerulean Bell `forced_selection`,
+  center-key enhancements and selling inside packs, all now upstream. `mod/balatro-agent.patch` keeps only seed/won/
+  ability in state, `go_to_menu`, `endless_mode` and the read-only `blind_order`/`boss_pool_order`/`debug_rng`.
+- **Bridge**: the pipe is per launch (`\\.\pipe\balatro-mcp-<instance>`); `bridge.py` finds it through the discovery
+  record in `%TEMP%`. `live.py`: `used_vouchers` are objects now; targeted consumables are judged by hand size again (the
+  mod now reports the game's `can_use_consumeable`, false until targets are highlighted); `wait_stable` also waits for
+  `decision_surface`. Smoke run on the real game: new run, blinds, shop buys/sells, a Mega Standard pack, a planet.
+- **Settle fix on top of v0.2.6** (`game_events.lua`): `juice_card_until` (DNA / Trading Card at blind select, active
+  Loyalty Card, ready Invisible Joker) re-queues a REAL-timer background event every 0.8 s, so the action-scoped work
+  mark never settled and `select_blind` hung until the first hand (Typecast run, DNA). Such presentation events are
+  now ignored; pack-card creation (TOTAL timer) is still waited for.
+- **Stage 5 challenge campaign** (Sonnet agents, `runs_claude/`): 13 runs on 2026-10-16, 10 won (Medusa, Double or
+  Nothing, Mad World, Inflation, Typecast, Monolith, Blast Off, Five-Card Draw, Knife's Edge, Bram Poker); Rule Breaker
+  progress 5 -> 15 of 20 challenges. Per-challenge tips merged into `PLAYER.md` ("Challenge notes").
+
 ## v1.3 — A recorded real win; Stages 3 and 4; hosted decision APIs (2026-10-09)
 
 - **Real win, on video.** `raw0056` (Stage 2, no notes) beat real Balatro on seed UP2YINZS: 27 rounds, Ante 10, every

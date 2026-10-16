@@ -23,9 +23,11 @@ Every command prints the new state, so a separate `show` is rarely needed. Decid
 - Quote option text with SINGLE quotes, e.g. `BAL do 3 'buy joker X $5'`: in double quotes bash expands `$5` to nothing and the guard rejects.
 - Hand indices shift after each draw: re-read before every play/discard.
 - Before every sell/buy re-read the current option list: the guard only checks the text you typed, so selling the wrong joker is not caught.
-- Many actions return "timed out" but applied: check the state before retrying. On a pipe/bridge error wait a few seconds and `show`; after 5 failures stop and report.
+- An action returns once the game has finished it (no "timed out" since mod v0.2.6). On a pipe/bridge error wait a few seconds and `show`; after 5 failures stop and report.
 - If the game crashed or was closed (pipe error that does not clear): run `BAL recover` (relaunches Balatro and continues the saved run, usually from the start of the current blind), then `BAL show` and keep playing the SAME run; never `new`.
 - `new` returns `LOCKED` for decks not unlocked in this save (b_checkered, b_erratic): stop and report.
+- Challenge runs: the state text does not list the challenge's rules; read your challenge's row in
+  `/d/Documents/Codes/balatro-gameplay/balatro-agent/mcp/data/reference/challenges.md` before the first decision.
 - After the final winning hand `cash_out CANNOT_USE_NOW` can appear; ignore it.
 
 ## Lessons (from runs in MODES.md)
@@ -50,7 +52,7 @@ Every command prints the new state, so a separate `show` is rarely needed. Decid
 - Won (Abandoned, Sonnet): Straight L8 + Steel cards held in hand (Chariot/Standard packs) retriggered by Mime (two held steels = x5) + Baseball Card (x1.5 per uncommon joker) + Acrobat x3 on the last hand: burn hands 1-3 with 1-card plays, play the real hand last. Selling a NEGATIVE joker removes its own slot (no free slot). The CLI has no boss-reroll command, so Director's Cut/Retcon vouchers are wasted.
 - Won (Painted, Sonnet): Two Pair L10 (Black Hole + Uranus only) + Acrobat x3: bank a Two Pair for the LAST hand, burn earlier hands as pair/high card (under The Mouth an off-type burn hand scores 0 but still uses a hand). Stuntman +250 chips is worth -2 hand size. If the Ante 8 boss is Violet Vessel (300k), skipping the Big Blind for a Boss Tag rerolls it (to Verdant Leaf 100k here); the reroll happens with no extra command.
 - Amber Acorn (Ante 8 boss) flips all jokers face down and shuffles them at the start of the blind: additive jokers (Supernova) must sit before xMult ones, so set the order in the shop before the boss and expect it to be shuffled; Loyalty Card timing is lost. `BAL jokers` now works with hidden jokers.
-- Joker pack (Buffoon/Jumbo/Mega, bought or from a tag) with full joker slots: pick returns SLOTS_FULL. Since 2026-10-12 `sell joker` options are listed INSIDE an open pack too: sell your weakest joker there, then pick. After the final winning hand `cash_out CANNOT_USE_NOW` can appear; ignore it.
+- Joker pack (Buffoon/Jumbo/Mega, bought or from a tag) with full joker slots: pick returns SLOTS_FULL. Since 2026-10-12 `sell joker` options are listed INSIDE an open pack too: sell your weakest joker there, then pick.
 
 ## Lessons from the 2026-10-12 runs (merged from LESSONS_QUEUE.md)
 - The #1 cause of losses: still one (or zero) xMult joker at Ante 5. By Ante 4-5 own 2+ xMult sources (Cavendish, Card Sharp, The Order/Duo/Trio, Blueprint copying an xMult, Loyalty Card, Acrobat); flat +chips/+mult builds cap near 10-25k per hand.
@@ -78,6 +80,31 @@ Every command prints the new state, so a separate `show` is rarely needed. Decid
 - Wild cards count as clubs for Blackboard/Onyx Agate; play red cards as kickers to keep the held hand black.
 - Ghost wins: Burglar + Mystic Summit + Green Joker (no discards keeps Summit on); Shortcut + Telescope + Saturn every shop to Straight L13, with Card Sharp.
 - Tool: one `BAL do` per tool message (indices shift after each action); play/discard take at most 5 cards.
+
+## Challenge notes (merged 2026-10-16; read your challenge's line)
+
+General: joker order is +mult/+chips LEFT, xMult RIGHT (a Mystic Summit right of The Order never got multiplied).
+Amber Acorn hides and shuffles jokers: deduce the order from the first hand's exact score, fix it with `BAL jokers`.
+Death: the LOWER hand index becomes a copy of the HIGHER one, whatever order you type. Skip-tag jokers (Rare, Double,
+Negative, Polychrome, Buffoon) arrive in the next shop; skipping Ante 8 Small+Big leaves only the boss.
+
+- X-ray Vision (won): discard face-down cards (replacements come face up); Half Joker + Stuntman + 1-2 card plays make them irrelevant.
+- Luxury Tax (won): spend down every shop; Paint Brush; Photograph + Hanging Chad with a face card leftmost.
+- Rich get Richer (won): chips are capped at your money, so bank (Money Tree) and favour mult; Blueprint left of Flower Pot on 5-card straights.
+- On a Knife's Edge (won, 2nd try): buy a cheap fodder joker every shop and move it next to the Dagger during the next blind; then flat chips (Stuntman + Paint Brush) and an edition joker. Skip Ante 8 Small+Big so only the boss select eats a joker.
+- Medusa (won): J/Q/K are Stones (+50, always score, not faces): Pair/Trips + Stone kickers, buy mult; The Pillar debuffs this ante's played cards, so use 3-card plays before the boss.
+- Double or Nothing (won): played scoring cards are debuffed for good; build on hand levels, flat chips (Blue Joker) and xMult; non-scoring kickers stay live. Throwback + skips.
+- Mad World (won): ranks 2-9, every card a face (Pareidolia): Even Steven + Hack on low evens, The Trio with Full House; Full House L11 reached ~1M.
+- Inflation (won): every purchase raises all prices by $1: buy few strong pieces; money from skip tags (Garbage, Investment); never sell Credit Card while below $0.
+- Typecast (won): joker slots go to 0 after the Ante 4 boss: own the whole build before it. Splash + Flower Pot (x3 on any 4-suit 5-card play) + Bull with hoarded money.
+- Monolith (won): Obelisk resets only on your most-played type: play a decoy type early, then High Card of Stones (+ Stuntman, Half Joker, Driver's License).
+- Blast Off (won): 2 hands, 4 slots: Constellation + a planet every shop (Planet Merchant/Tycoon, Reroll Surplus); keep a consumable slot free.
+- Five-Card Draw (won): Stuntman + single-card plays + Half Joker / Abstract / Banner (never discard) / Card Sharp.
+- Bram Poker (won): no shop jokers: tags, Spectral (Wraith), Arcana (The Soul, Judgement) and Buffoon packs; feed the Vampire enhanced cards; Blueprint left of Triboulet on a K/Q pair.
+- Cruelty (lost Ante 5): 3 slots and no Small/Big pay: two of the three slots must be xMult by Ante 3-4; flat jokers cap ~5k.
+- Golden Needle (lost Ante 4): one hand per blind, discards cost $1: a plain straight is ~97% over 6 discards, a 4-suit or all-black condition only ~65%; own an unconditional x source and a second hand type before The Arm / The Flint.
+- Non-Perishable (lost 5x, best Ante 8 boss): every joker is eternal, so slots are the cap: at most 2 flat jokers early, keep slots for xMult (Duo/Trio/Acrobat/Cavendish), never Ankh-copy onto an eternal board; Negative tags add slots. Keep a Boss Tag for Ante 8 (Violet Vessel 300k beat a flat build + one Loyalty x4 hand).
+- Flushed achievement (not yet): Lovers is rare: also Death/Cryptid copies of a Wild, Incantation, Standard packs; keep consumable slots empty; build to win first, then hunt Wilds in endless.
 
 ## Final answer (short)
 

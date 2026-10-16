@@ -108932,3 +108932,59 @@
 13:08:07.215 REAL raw0056.pt UP2YINZS: real 27 rounds (ante 10, won) | sim 27 | 10.6 min
 13:09:22.106 realloop: recorded the win -> win_UP2YINZS.mp4 (+ cover win_UP2YINZS.png, raw kept)
 13:09:22.109 realloop: run won, stopping (--stop-on-win)
+21:48:24.747 new_game failed (LOCKED: Deck not unlocked: b_checkered); retrying
+21:48:27.754 new_game failed (LOCKED: Deck not unlocked: b_checkered); retrying
+21:48:30.761 new_game failed (LOCKED: Deck not unlocked: b_checkered); retrying
+21:50:09.463 new_game failed (LOCKED: Deck not unlocked: b_erratic); retrying
+21:50:12.469 new_game failed (LOCKED: Deck not unlocked: b_erratic); retrying
+21:50:15.476 new_game failed (LOCKED: Deck not unlocked: b_erratic); retrying
+21:50:19.224 new_game failed (LOCKED: Deck not unlocked: b_checkered); retrying
+21:50:22.230 new_game failed (LOCKED: Deck not unlocked: b_checkered); retrying
+21:50:25.237 new_game failed (LOCKED: Deck not unlocked: b_checkered); retrying
+02:02:37.609 realloop: playing with raw0056.pt on cuda
+02:02:42.842 [g-1 a1 blind] -> play this blind (p=1.00)
+02:03:30.719 realloop: playing with raw0056.pt on cuda
+02:03:39.441 [g-1 a1 blind] -> play this blind (p=1.00)
+02:03:39.827 [g-1 a1 hand] -> select K♣ (p=0.99)
+02:03:39.947 [g-1 a1 hand] -> select K♥ (p=1.00)
+02:03:40.069 [g-1 a1 hand] -> select J♣ (p=1.00)
+02:03:40.192 [g-1 a1 hand] -> select 9♥ (p=1.00)
+02:03:40.323 [g-1 a1 hand] -> select 8♥ (p=1.00)
+02:03:43.084 [g-1 a1 r0] 0/300 -> play selected (p=0.99)
+02:03:44.026 [g-1 a1 hand] -> select 2♦ (p=1.00)
+02:03:44.157 [g-1 a1 hand] -> select 2♣ (p=1.00)
+02:03:44.294 [g-1 a1 hand] -> select 3♦ (p=1.00)
+02:03:44.425 [g-1 a1 hand] -> select 4♠ (p=1.00)
+02:03:44.569 [g-1 a1 hand] -> select 5♣ (p=1.00)
+02:03:45.659 [g-1 a1 r0] 60/300 -> discard selected (p=0.99)
+02:03:46.120 [g-1 a1 hand] -> select 3♣ (p=1.00)
+02:03:46.252 [g-1 a1 hand] -> select 3♠ (p=1.00)
+02:03:46.382 [g-1 a1 hand] -> select 6♦ (p=1.00)
+02:03:46.515 [g-1 a1 hand] -> select 7♠ (p=1.00)
+02:03:46.654 [g-1 a1 hand] -> select 9♣ (p=1.00)
+02:03:47.654 [g-1 a1 r0] 60/300 -> discard selected (p=1.00)
+02:03:48.053 [g-1 a1 hand] -> select Q♠ (p=0.65)
+02:03:48.185 [g-1 a1 hand] -> select Q♥ (p=1.00)
+02:03:48.320 [g-1 a1 hand] -> select 3♥ (p=1.00)
+02:03:48.462 [g-1 a1 hand] -> select 4♥ (p=1.00)
+02:03:48.614 [g-1 a1 hand] -> select 6♥ (p=1.00)
+02:03:49.602 [g-1 a1 r0] 60/300 -> discard selected (p=0.99)
+02:03:49.996 [g-1 a1 hand] -> select A♦ (p=1.00)
+02:03:50.230 [g-1 a1 hand] -> select A♥ (p=1.00)
+02:03:50.357 [g-1 a1 hand] -> select K♦ (p=1.00)
+02:03:50.483 [g-1 a1 hand] -> select J♥ (p=1.00)
+02:03:50.668 [g-1 a1 hand] -> select 9♠ (p=1.00)
+02:03:53.357 [g-1 a1 r0] 60/300 -> play selected (p=1.00)
+02:03:54.276 [g-1 a1 hand] -> select 8♦ (p=1.00)
+02:03:54.398 [g-1 a1 hand] -> select 8♠ (p=1.00)
+02:03:54.524 [g-1 a1 hand] -> select 9♦ (p=0.99)
+02:03:54.660 [g-1 a1 hand] -> select 7♥ (p=1.00)
+02:03:54.796 [g-1 a1 hand] -> select 7♣ (p=0.98)
+02:03:58.217 [g-1 a1 r0] 124/300 -> play selected (p=1.00)
+02:03:59.114 [g-1 a1 hand] -> select Q♣ (p=1.00)
+02:03:59.214 [g-1 a1 hand] -> select Q♦ (p=0.99)
+02:03:59.330 [g-1 a1 hand] -> select A♣ (p=0.84)
+02:03:59.437 [g-1 a1 hand] -> select 10♠ (p=0.83)
+02:03:59.557 [g-1 a1 hand] -> select 7♦ (p=1.00)
+02:04:02.282 [g-1 a1 r0] 224/300 -> play selected (p=1.00)
+02:04:08.266 REAL raw0056.pt NK4627E3: real 0 rounds (ante 1, lost) | sim 0 | 0.4 min

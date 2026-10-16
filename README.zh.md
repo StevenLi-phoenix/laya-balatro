@@ -32,7 +32,7 @@ Balatro + balatro-agent mod ──named pipe JSON-RPC──▶ bridge.py ─▶ 
                                        policy.py: Laya choice question → 选项概率 → 采样/训练
 ```
 
-mod 管道同一时间只服务一个客户端：自对弈或 `claude_cli` 运行时请关闭占用 `\\.\pipe\balatro-mcp` 的 MCP 客户端。
+每次启动游戏，mod 在 `\\.\pipe\balatro-mcp-<实例>` 上服务，并写发现记录 `%TEMP%\balatro-mcp-<实例>`；`bridge.py` 连最新的那个实例。管道可同时接多个客户端，自对弈或 `claude_cli` 运行时不必关闭 MCP 客户端。
 
 ## 运行
 

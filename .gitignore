@@ -28,3 +28,4 @@ runs_sim_v2_combo/*.txt
 runs/*.out
 runs/screen_pc*.log
 runs_claude/current.json
+runs/real_test.md
